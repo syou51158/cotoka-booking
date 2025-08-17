@@ -1,0 +1,275 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Location {
+  id          String   @id @default(cuid())
+  name        String
+  address     String?
+  phone       String?
+  email       String?
+  timezone    String   @default("Asia/Tokyo")
+  settings    Json?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  staff       Staff[]
+  services    Service[]
+  rooms       Room[]
+  bookings    Booking[]
+  schedules   Schedule[]
+  users       UserLocation[]
+
+  @@map("locations")
+}
+
+model User {
+  id          String   @id @default(cuid())
+  email       String   @unique
+  phone       String?
+  firstName   String
+  lastName    String
+  role        UserRole @default(CUSTOMER)
+  locale      String   @default("ja")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  bookings    Booking[]
+  locations   UserLocation[]
+  staff       Staff?
+
+  @@map("users")
+}
+
+model UserLocation {
+  id         String   @id @default(cuid())
+  userId     String
+  locationId String
+  role       UserRole
+  createdAt  DateTime @default(now())
+
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  location Location @relation(fields: [locationId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, locationId])
+  @@map("user_locations")
+}
+
+model Staff {
+  id          String   @id @default(cuid())
+  userId      String   @unique
+  locationId  String
+  name        String
+  email       String?
+  phone       String?
+  avatar      String?
+  isActive    Boolean  @default(true)
+  settings    Json?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  location    Location    @relation(fields: [locationId], references: [id], onDelete: Cascade)
+  bookings    Booking[]
+  schedules   Schedule[]
+  services    StaffService[]
+
+  @@map("staff")
+}
+
+model Service {
+  id          String   @id @default(cuid())
+  locationId  String
+  name        String
+  description String?
+  duration    Int      // minutes
+  price       Int      // cents
+  category    String?
+  isActive    Boolean  @default(true)
+  settings    Json?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  location    Location       @relation(fields: [locationId], references: [id], onDelete: Cascade)
+  bookings    Booking[]
+  staff       StaffService[]
+
+  @@map("services")
+}
+
+model StaffService {
+  id        String @id @default(cuid())
+  staffId   String
+  serviceId String
+
+  staff   Staff   @relation(fields: [staffId], references: [id], onDelete: Cascade)
+  service Service @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+
+  @@unique([staffId, serviceId])
+  @@map("staff_services")
+}
+
+model Room {
+  id          String   @id @default(cuid())
+  locationId  String
+  name        String
+  capacity    Int      @default(1)
+  isActive    Boolean  @default(true)
+  settings    Json?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  location Location  @relation(fields: [locationId], references: [id], onDelete: Cascade)
+  bookings Booking[]
+
+  @@map("rooms")
+}
+
+model Schedule {
+  id          String      @id @default(cuid())
+  locationId  String
+  staffId     String?
+  dayOfWeek   Int         // 0=Sunday, 1=Monday, etc.
+  startTime   String      // HH:mm format
+  endTime     String      // HH:mm format
+  isActive    Boolean     @default(true)
+  type        ScheduleType @default(WORKING)
+  date        DateTime?   // For specific date overrides
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  location Location @relation(fields: [locationId], references: [id], onDelete: Cascade)
+  staff    Staff?   @relation(fields: [staffId], references: [id], onDelete: Cascade)
+
+  @@map("schedules")
+}
+
+model Booking {
+  id              String        @id @default(cuid())
+  locationId      String
+  userId          String
+  staffId         String
+  serviceId       String
+  roomId          String?
+  startTime       DateTime
+  endTime         DateTime
+  status          BookingStatus @default(PENDING)
+  totalAmount     Int           // cents
+  depositAmount   Int?          // cents
+  notes           String?
+  customerInfo    Json?         // Store customer details
+  metadata        Json?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  location Location @relation(fields: [locationId], references: [id], onDelete: Cascade)
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  staff    Staff    @relation(fields: [staffId], references: [id], onDelete: Cascade)
+  service  Service  @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  room     Room?    @relation(fields: [roomId], references: [id], onDelete: SetNull)
+  payments Payment[]
+
+  @@map("bookings")
+}
+
+model Payment {
+  id              String        @id @default(cuid())
+  bookingId       String
+  stripePaymentId String?
+  amount          Int           // cents
+  currency        String        @default("JPY")
+  status          PaymentStatus @default(PENDING)
+  method          PaymentMethod
+  metadata        Json?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  booking Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+
+  @@map("payments")
+}
+
+model Notification {
+  id          String             @id @default(cuid())
+  bookingId   String?
+  userId      String?
+  type        NotificationType
+  channel     NotificationChannel
+  recipient   String             // email or phone
+  subject     String?
+  content     String
+  status      NotificationStatus @default(PENDING)
+  sentAt      DateTime?
+  metadata    Json?
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+
+  @@map("notifications")
+}
+
+enum UserRole {
+  OWNER
+  MANAGER
+  STAFF
+  RECEPTION
+  CUSTOMER
+}
+
+enum BookingStatus {
+  PENDING
+  HELD
+  CONFIRMED
+  COMPLETED
+  CANCELLED
+  NO_SHOW
+}
+
+enum PaymentStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+  REFUNDED
+}
+
+enum PaymentMethod {
+  CARD
+  CASH
+  BANK_TRANSFER
+  APPLE_PAY
+  GOOGLE_PAY
+}
+
+enum NotificationType {
+  BOOKING_CONFIRMATION
+  BOOKING_REMINDER
+  BOOKING_CANCELLED
+  PAYMENT_CONFIRMATION
+  PAYMENT_FAILED
+}
+
+enum NotificationChannel {
+  EMAIL
+  SMS
+  PUSH
+}
+
+enum NotificationStatus {
+  PENDING
+  SENT
+  DELIVERED
+  FAILED
+}
+
+enum ScheduleType {
+  WORKING
+  BREAK
+  UNAVAILABLE
+}
