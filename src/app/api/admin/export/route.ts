@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { format } from "date-fns";
 import { requireAdmin } from "@/lib/admin-auth";
 import { getAdminReservations } from "@/server/admin";
-import { getPaymentSummaries } from "@/server/payments";
+import { computePaymentState } from "@/lib/payments";
 
 export const runtime = "nodejs";
 
@@ -31,12 +31,12 @@ export async function GET(request: Request) {
       status,
     });
 
-    const summaries = await getPaymentSummaries(items.map((r) => r.id));
     const filtered = items.filter((r) => {
-      const s = summaries[r.id];
-      if (payParam === "unpaid") return s?.paymentState === "unpaid";
-      if (payParam === "partial") return s?.paymentState === "partially_paid";
-      if (payParam === "paid") return s?.paymentState === "paid";
+      const state = computePaymentState(r);
+      if (payParam === "unpaid") return state.statusTag === "unpaid";
+      if (payParam === "partial") return state.statusTag === "partial";
+      if (payParam === "paid") return state.statusTag === "paid";
+      if (payParam === "canceled") return state.statusTag === "canceled";
       return true;
     });
 
@@ -65,19 +65,19 @@ export async function GET(request: Request) {
       return s;
     };
 
-    const stateJp = (state: "paid" | "partially_paid" | "unpaid") =>
+    const stateJp = (state: "paid" | "partial" | "unpaid" | "canceled") =>
       state === "paid"
         ? "支払い済み"
-        : state === "partially_paid"
+        : state === "partial"
         ? "一部入金"
+        : state === "canceled"
+        ? "キャンセル"
         : "未収";
 
     const rows = filtered.map((r) => {
       const start = format(new Date(r.start_at), "yyyy/MM/dd HH:mm");
       const end = format(new Date(r.end_at), "yyyy/MM/dd HH:mm");
-      const s = summaries[r.id];
-      const paid = s?.paidTotal ?? 0;
-      const remaining = s?.remaining ?? Math.max(r.amount_total_jpy - (r.paid_amount_jpy ?? 0), 0);
+      const state = computePaymentState(r);
       return [
         r.id,
         r.code,
@@ -89,10 +89,10 @@ export async function GET(request: Request) {
         r.customer_name ?? "",
         r.customer_email ?? "",
         r.customer_phone ?? "",
-        r.amount_total_jpy,
-        paid,
-        remaining,
-        stateJp(s?.paymentState ?? "unpaid"),
+        state.total,
+        state.paid,
+        state.remaining,
+        stateJp(state.statusTag),
       ].map(escape).join(",");
     });
 

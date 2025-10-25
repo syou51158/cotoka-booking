@@ -1,18 +1,21 @@
 import { createSupabaseServiceRoleClient } from "@/lib/supabase";
 import type { Database } from "@/types/database";
 
+// 支払い方法のリテラル型を統一
+type PaymentMethodLiteral = "cash" | "card" | "card_online" | "other";
+
 export type PaymentSummary = {
   reservationId: string;
   amountTotal: number; // reservations.amount_total_jpy
   paidTotal: number; // events 合算（数値以外は0扱い）
   remaining: number; // max(0, amountTotal - paidTotal)
   paymentState: "unpaid" | "partially_paid" | "paid";
-  latestMethod?: "cash" | "card" | "card_online" | "other";
+  latestMethod?: PaymentMethodLiteral;
   latestAt?: string; // ISO
   sources: Array<{
     type: "reservation_paid" | "reservation_settled";
     amount: number;
-    method?: string;
+    method?: PaymentMethodLiteral;
     at: string;
   }>;
 };
@@ -28,7 +31,7 @@ function toNumberSafe(v: unknown): number {
   return 0;
 }
 
-function methodLabelFromEvent(type: string, payload: any): "cash" | "card" | "card_online" | "other" | undefined {
+function methodLabelFromEvent(type: string, payload: any): PaymentMethodLiteral | undefined {
   const raw = typeof payload?.payment_method === "string" ? payload.payment_method : undefined;
   if (raw === "cash" || raw === "card" || raw === "card_online" || raw === "other") return raw;
   // 既存イベントの慣習に合わせたフォールバック
@@ -95,7 +98,7 @@ export async function getPaymentSummaries(
         : row.created_at;
       const method = methodLabelFromEvent(row.type, p);
       return {
-        type: (row.type === "reservation_settled" ? "reservation_settled" : "reservation_paid") as const,
+        type: (row.type === "reservation_settled" ? "reservation_settled" : "reservation_paid"),
         amount,
         method,
         at,

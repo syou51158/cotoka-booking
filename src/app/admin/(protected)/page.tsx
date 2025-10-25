@@ -16,6 +16,7 @@ import SettlePaymentForm from "@/components/admin/settle-payment-form";
 import { getPaymentSummaries } from "@/server/payments";
 import PaymentHistoryModal from "@/components/admin/payment-history-modal";
 import { env } from "@/lib/env";
+import { computePaymentState } from "@/lib/payments";
 
 const STATUS_LABEL = {
   pending: "未決済",
@@ -121,28 +122,25 @@ export default async function AdminDashboard({
     })(),
   ]);
 
-  // SSOT: 支払いサマリーを取得
-  const summaries = await getPaymentSummaries(reservations.map((r) => r.id));
-  const todaySummaries = await getPaymentSummaries(todayReservations.map((r) => r.id));
-  const weekSummaries = await getPaymentSummaries(weekReservations.map((r) => r.id));
-
+  // SSOT: computePaymentStateを使用した支払い状態計算
   const filteredReservations = reservations.filter((r) => {
-    const s = summaries[r.id];
-    if (payParam === "unpaid") return s?.paymentState === "unpaid";
-    if (payParam === "partial") return s?.paymentState === "partially_paid";
-    if (payParam === "paid") return s?.paymentState === "paid";
+    const state = computePaymentState(r);
+    if (payParam === "unpaid") return state.statusTag === "unpaid";
+    if (payParam === "partial") return state.statusTag === "partial";
+    if (payParam === "paid") return state.statusTag === "paid";
+    if (payParam === "canceled") return state.statusTag === "canceled";
     return true;
   });
   const statusOptions = Object.entries(STATUS_LABEL);
 
   // サマリー集計（SSOT）
-  const summarize = (items: typeof reservations, sums: Record<string, { paidTotal: number }>) => {
+  const summarize = (items: typeof reservations) => {
     const count = items.length;
-    const paidTotal = items.reduce((sum, r) => sum + (sums[r.id]?.paidTotal ?? 0), 0);
+    const paidTotal = items.reduce((sum, r) => sum + computePaymentState(r).paid, 0);
     return { count, paidTotal };
   };
-  const todaySummary = summarize(todayReservations, todaySummaries);
-  const weekSummary = summarize(weekReservations, weekSummaries);
+  const todaySummary = summarize(todayReservations);
+  const weekSummary = summarize(weekReservations);
 
   // CSV エクスポート URL（現在のフィルタを引き継ぐ）
   const params = new URLSearchParams({
@@ -297,6 +295,7 @@ export default async function AdminDashboard({
                 <option value="unpaid">未収のみ</option>
                 <option value="partial">一部入金のみ</option>
                 <option value="paid">支払い済みのみ</option>
+                <option value="canceled">キャンセル済みのみ</option>
               </select>
             </div>
             <div className="flex items-end gap-2">
@@ -353,20 +352,25 @@ export default async function AdminDashboard({
                         >
                           {STATUS_LABEL[reservation.status] ?? reservation.status}
                         </Badge>
-                        {/* 入金ステータスバッジ */}
+                        {/* 入金ステータスバッジ（SSOT） */}
                         {(() => {
-                          const s = summaries[reservation.id];
-                          if (!s || s.paymentState === "unpaid") {
+                          const state = computePaymentState(reservation);
+                          if (state.statusTag === "canceled") {
+                            return (
+                              <Badge className="bg-slate-700/60 text-slate-300">キャンセル</Badge>
+                            );
+                          }
+                          if (state.statusTag === "unpaid") {
                             return (
                               <Badge className="bg-amber-700/60 text-amber-100">未収</Badge>
                             );
                           }
-                          if (s.paymentState === "partially_paid") {
+                          if (state.statusTag === "partial") {
                             return (
                               <Badge className="bg-blue-700/60 text-blue-100">一部入金</Badge>
                             );
                           }
-                          if (s.paymentState === "paid") {
+                          if (state.statusTag === "paid") {
                             return (
                               <Badge className="bg-emerald-700/70 text-emerald-100">支払い済み</Badge>
                             );
@@ -376,9 +380,9 @@ export default async function AdminDashboard({
                         {/* DEV-only: SSOTミニテキスト */}
                         {env.ALLOW_DEV_MOCKS === "true" && env.NEXT_PUBLIC_ALLOW_DEV_MOCKS === "true" ? (
                           (() => {
-                            const s = summaries[reservation.id];
+                            const state = computePaymentState(reservation);
                             return (
-                              <span className="text-[10px] text-slate-400">{s?.paymentState ?? "unpaid"} / paid={s?.paidTotal ?? 0} / remain={s?.remaining ?? 0}</span>
+                              <span className="text-[10px] text-slate-400">{state.statusTag} / paid={state.paid} / remain={state.remaining}</span>
                             );
                           })()
                         ) : null}
@@ -401,12 +405,9 @@ export default async function AdminDashboard({
                       <span className="text-sm font-semibold text-slate-200">
                         ¥{reservation.amount_total_jpy.toLocaleString()}
                       </span>
-                      {/* 残額列 */}
+                      {/* 残額列（SSOT） */}
                       <span className="rounded border border-slate-800 px-3 py-1 text-xs text-slate-300">
-                        残額 ¥{(summaries[reservation.id]?.remaining ?? Math.max(
-                          reservation.amount_total_jpy - (reservation.paid_amount_jpy ?? 0),
-                          0,
-                        )).toLocaleString()}
+                        残額 ¥{computePaymentState(reservation).remaining.toLocaleString()}
                       </span>
                       <span className="rounded border border-slate-800 px-3 py-1 text-xs text-slate-300">
                         クリックで詳細
@@ -463,19 +464,19 @@ export default async function AdminDashboard({
                         >
                           メモを保存
                         </Button>
-                        <PaymentHistoryModal reservationId={reservation.id} />
+                        <PaymentHistoryModal reservationId={reservation.id} reservation={reservation} />
                       </div>
                     </form>
 
                     {(() => {
-                      const s = summaries[reservation.id];
-                      const canSettle = reservation.status !== "canceled" && (s?.remaining ?? 0) > 0;
+                      const state = computePaymentState(reservation);
+                      const canSettle = reservation.status !== "canceled" && state.remaining > 0;
                       if (!canSettle) return null;
 
                       return (
                         <SettlePaymentForm
                           reservationId={reservation.id}
-                          remaining={s?.remaining ?? 0}
+                          remaining={state.remaining}
                           paymentOption={(reservation as any).payment_option ?? null}
                         />
                       );
