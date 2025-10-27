@@ -12,8 +12,9 @@ function getExpectedToken() {
   return createHash("sha256").update(passcode).digest("hex");
 }
 
-export function isAdminAuthenticated() {
-  const token = cookies().get(ADMIN_COOKIE)?.value;
+export async function isAdminAuthenticated() {
+  const cookieStore = await cookies();
+  const token = cookieStore.get(ADMIN_COOKIE)?.value;
   if (!token) return false;
   try {
     return token === getExpectedToken();
@@ -22,16 +23,17 @@ export function isAdminAuthenticated() {
   }
 }
 
-export function requireAdmin() {
-  if (!isAdminAuthenticated()) {
+export async function requireAdmin() {
+  if (!(await isAdminAuthenticated())) {
     redirect("/admin/login");
   }
 }
 
-export function createAdminSession() {
+export async function createAdminSession() {
   const expected = getExpectedToken();
   const secure = process.env.NODE_ENV === "production";
-  cookies().set(ADMIN_COOKIE, expected, {
+  const cookieStore = await cookies();
+  cookieStore.set(ADMIN_COOKIE, expected, {
     httpOnly: true,
     sameSite: "lax",
     secure,
@@ -40,12 +42,41 @@ export function createAdminSession() {
   });
 }
 
-export function clearAdminSession() {
-  cookies().set(ADMIN_COOKIE, "", {
+export async function clearAdminSession() {
+  const cookieStore = await cookies();
+  cookieStore.set(ADMIN_COOKIE, "", {
     httpOnly: true,
     sameSite: "lax",
     secure: process.env.NODE_ENV === "production",
     path: "/",
     maxAge: 0,
   });
+}
+
+export async function verifyAdminAuth(request: Request) {
+  const cookieHeader = request.headers.get("cookie");
+  if (!cookieHeader) {
+    return { success: false, error: "No authentication cookie" };
+  }
+
+  const cookies = cookieHeader.split(";").reduce((acc, cookie) => {
+    const [key, value] = cookie.trim().split("=");
+    acc[key] = value;
+    return acc;
+  }, {} as Record<string, string>);
+
+  const token = cookies[ADMIN_COOKIE];
+  if (!token) {
+    return { success: false, error: "Admin token not found" };
+  }
+
+  try {
+    const expected = getExpectedToken();
+    if (token !== expected) {
+      return { success: false, error: "Invalid admin token" };
+    }
+    return { success: true };
+  } catch (error) {
+    return { success: false, error: "Authentication verification failed" };
+  }
 }

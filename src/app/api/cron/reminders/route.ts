@@ -52,14 +52,46 @@ async function handleRequest(request: Request) {
   }
 
   try {
+    console.log('Starting reminder processing...');
+    const startTime = Date.now();
+    
     const result = await processReservationReminders({
       referenceDate,
       windowMinutes,
     });
-    return NextResponse.json({ status: "ok", ...result });
+    
+    const duration = Date.now() - startTime;
+    const logData = {
+      timestamp: new Date().toISOString(),
+      duration_ms: duration,
+      sent_count: result.sent || 0,
+      status: 'success',
+      reference_date: referenceDate?.toISOString(),
+      window_minutes: windowMinutes
+    };
+    
+    console.log('Reminder processing completed:', JSON.stringify(logData));
+    
+    return NextResponse.json({ 
+      status: "ok", 
+      ...result,
+      duration_ms: duration,
+      timestamp: new Date().toISOString()
+    });
   } catch (error) {
-    console.error("Reminder job failed", error);
-    return NextResponse.json({ message: "error" }, { status: 500 });
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    const logData = {
+      timestamp: new Date().toISOString(),
+      status: 'error',
+      error: errorMessage
+    };
+    
+    console.error('Reminder processing failed:', JSON.stringify(logData));
+    return NextResponse.json({ 
+      message: "error", 
+      details: errorMessage,
+      timestamp: new Date().toISOString()
+    }, { status: 500 });
   }
 }
 

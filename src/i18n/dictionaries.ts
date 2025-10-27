@@ -109,6 +109,84 @@ const dictionaries = {
       successMessage: "更新内容を保存しました。",
       cancelSuccess: "予約をキャンセルしました。",
     },
+    email: {
+      common: {
+        siteName: "Cotoka Relax & Beauty SPA",
+        fromName: "Cotoka",
+        footer: {
+          address: "〒150-0001 東京都渋谷区神宮前1-1-1",
+          phone: "03-1234-5678",
+          website: "https://cotoka.jp",
+          unsubscribe: "配信停止をご希望の場合は、こちらまでご連絡ください。",
+        },
+      },
+      confirmation: {
+        subject: "【Cotoka】ご予約確認 - {serviceName}",
+        title: "ご予約ありがとうございます",
+        greeting: "{customerName} 様",
+        message: "以下の内容でご予約を承りました。",
+        details: {
+          service: "サービス",
+          staff: "担当セラピスト",
+          datetime: "日時",
+          duration: "所要時間",
+          total: "料金",
+          status: "ステータス",
+        },
+        location: {
+          title: "アクセス",
+          address: "〒150-0001 東京都渋谷区神宮前1-1-1",
+          directions: "JR原宿駅より徒歩3分",
+        },
+        calendar: {
+          title: "カレンダーに追加",
+          google: "Googleカレンダー",
+          apple: "Appleカレンダー",
+          ics: "その他のカレンダー",
+        },
+        notes: {
+          title: "ご来店について",
+          items: [
+            "ご予約時間の5分前にお越しください",
+            "お着替えをご用意しております",
+            "ご不明な点がございましたらお気軽にお問い合わせください"
+          ],
+        },
+        contact: "お問い合わせ",
+      },
+      reminder: {
+        subject24h: "【Cotoka】明日のご予約について - {serviceName}",
+        subject2h: "【Cotoka】まもなくご予約時間です - {serviceName}",
+        title24h: "明日のご予約について",
+        title2h: "まもなくご予約時間です",
+        greeting: "{customerName} 様",
+        message24h: "明日のご予約についてご案内いたします。",
+        message2h: "約2時間後にご予約のお時間となります。",
+        preparation: {
+          title: "ご来店前の準備",
+          items: [
+            "動きやすい服装でお越しください",
+            "貴重品はお預かりいたします",
+            "ご質問がございましたら事前にお知らせください"
+          ],
+        },
+      },
+      cancellation: {
+        subject: "【Cotoka】ご予約キャンセル確認 - {serviceName}",
+        title: "ご予約をキャンセルいたしました",
+        greeting: "{customerName} 様",
+        message: "以下のご予約をキャンセルいたしました。",
+        refund: {
+          title: "返金について",
+          message: "事前決済をされている場合、3-5営業日以内に返金処理を行います。",
+        },
+        rebook: {
+          title: "再予約について",
+          message: "またのご利用をお待ちしております。",
+          link: "新しい予約を取る",
+        },
+      },
+    },
   },
   en: {
     common: {
@@ -218,6 +296,84 @@ const dictionaries = {
       successMessage: "Reservation updated successfully.",
       cancelSuccess: "Reservation has been canceled.",
     },
+    email: {
+      common: {
+        siteName: "Cotoka Relax & Beauty SPA",
+        fromName: "Cotoka",
+        footer: {
+          address: "1-1-1 Jingumae, Shibuya-ku, Tokyo 150-0001",
+          phone: "+81-3-1234-5678",
+          website: "https://cotoka.jp",
+          unsubscribe: "If you wish to unsubscribe, please contact us.",
+        },
+      },
+      confirmation: {
+        subject: "[Cotoka] Booking Confirmation - {serviceName}",
+        title: "Thank you for your booking",
+        greeting: "Dear {customerName},",
+        message: "We have confirmed your reservation with the following details:",
+        details: {
+          service: "Service",
+          staff: "Therapist",
+          datetime: "Date & Time",
+          duration: "Duration",
+          total: "Total",
+          status: "Status",
+        },
+        location: {
+          title: "Location",
+          address: "1-1-1 Jingumae, Shibuya-ku, Tokyo 150-0001",
+          directions: "3 minutes walk from JR Harajuku Station",
+        },
+        calendar: {
+          title: "Add to Calendar",
+          google: "Google Calendar",
+          apple: "Apple Calendar",
+          ics: "Other Calendars",
+        },
+        notes: {
+          title: "Before Your Visit",
+          items: [
+            "Please arrive 5 minutes before your appointment",
+            "We provide changing clothes",
+            "Feel free to contact us if you have any questions"
+          ],
+        },
+        contact: "Contact Us",
+      },
+      reminder: {
+        subject24h: "[Cotoka] Tomorrow's Appointment - {serviceName}",
+        subject2h: "[Cotoka] Your Appointment is Soon - {serviceName}",
+        title24h: "About Tomorrow's Appointment",
+        title2h: "Your Appointment is Soon",
+        greeting: "Dear {customerName},",
+        message24h: "This is a reminder about your appointment tomorrow.",
+        message2h: "Your appointment is in approximately 2 hours.",
+        preparation: {
+          title: "Preparation for Your Visit",
+          items: [
+            "Please wear comfortable clothing",
+            "We will keep your valuables safe",
+            "Let us know if you have any questions in advance"
+          ],
+        },
+      },
+      cancellation: {
+        subject: "[Cotoka] Cancellation Confirmation - {serviceName}",
+        title: "Your reservation has been cancelled",
+        greeting: "Dear {customerName},",
+        message: "We have cancelled the following reservation:",
+        refund: {
+          title: "About Refunds",
+          message: "If you made a prepayment, we will process the refund within 3-5 business days.",
+        },
+        rebook: {
+          title: "Rebooking",
+          message: "We look forward to serving you again.",
+          link: "Make a new booking",
+        },
+      },
+    },
   },
   zh: {
     common: {
@@ -326,6 +482,84 @@ const dictionaries = {
       paymentHelp: "您將在 Stripe 安全地付款。",
       successMessage: "已更新預約資訊。",
       cancelSuccess: "預約已取消。",
+    },
+    email: {
+      common: {
+        siteName: "Cotoka Relax & Beauty SPA",
+        fromName: "Cotoka",
+        footer: {
+          address: "〒150-0001 東京都渋谷区神宮前1-1-1",
+          phone: "+81-3-1234-5678",
+          website: "https://cotoka.jp",
+          unsubscribe: "如需取消訂閱，請聯絡我們。",
+        },
+      },
+      confirmation: {
+        subject: "【Cotoka】預約確認 - {serviceName}",
+        title: "感謝您的預約",
+        greeting: "{customerName} 您好，",
+        message: "我們已確認您的預約，詳細內容如下：",
+        details: {
+          service: "服務",
+          staff: "理療師",
+          datetime: "日期時間",
+          duration: "時長",
+          total: "總額",
+          status: "狀態",
+        },
+        location: {
+          title: "地址",
+          address: "〒150-0001 東京都渋谷区神宮前1-1-1",
+          directions: "JR原宿站步行3分鐘",
+        },
+        calendar: {
+          title: "加入行事曆",
+          google: "Google行事曆",
+          apple: "Apple行事曆",
+          ics: "其他行事曆",
+        },
+        notes: {
+          title: "來店須知",
+          items: [
+            "請於預約時間前5分鐘到達",
+            "我們提供更衣服務",
+            "如有任何疑問請隨時聯絡我們"
+          ],
+        },
+        contact: "聯絡我們",
+      },
+      reminder: {
+        subject24h: "【Cotoka】明日預約提醒 - {serviceName}",
+        subject2h: "【Cotoka】預約時間即將到來 - {serviceName}",
+        title24h: "關於明日的預約",
+        title2h: "預約時間即將到來",
+        greeting: "{customerName} 您好，",
+        message24h: "提醒您明日的預約。",
+        message2h: "您的預約時間約在2小時後。",
+        preparation: {
+          title: "來店前準備",
+          items: [
+            "請穿著舒適的服裝",
+            "貴重物品我們會妥善保管",
+            "如有疑問請提前告知"
+          ],
+        },
+      },
+      cancellation: {
+        subject: "【Cotoka】取消預約確認 - {serviceName}",
+        title: "您的預約已取消",
+        greeting: "{customerName} 您好，",
+        message: "我們已取消以下預約：",
+        refund: {
+          title: "關於退款",
+          message: "如您已預付費用，我們將在3-5個工作日內處理退款。",
+        },
+        rebook: {
+          title: "重新預約",
+          message: "期待再次為您服務。",
+          link: "進行新預約",
+        },
+      },
     },
   },
 } as const;

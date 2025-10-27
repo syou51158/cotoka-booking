@@ -15,6 +15,8 @@ import Toaster from "@/components/ui/toaster";
 import SettlePaymentForm from "@/components/admin/settle-payment-form";
 import { getPaymentSummaries } from "@/server/payments";
 import PaymentHistoryModal from "@/components/admin/payment-history-modal";
+import { EmailHistoryModal } from "@/components/admin/email-history-modal";
+import { ResendEmailButton } from "@/components/admin/resend-email-button";
 import { env } from "@/lib/env";
 import { computePaymentState } from "@/lib/payments";
 
@@ -465,6 +467,11 @@ export default async function AdminDashboard({
                           メモを保存
                         </Button>
                         <PaymentHistoryModal reservationId={reservation.id} reservation={reservation} />
+                        <EmailHistoryModal reservationId={reservation.id} />
+                        <ResendEmailButton 
+                          reservationId={reservation.id} 
+                          customerEmail={reservation.customer_email} 
+                        />
                       </div>
                     </form>
 

@@ -5,6 +5,8 @@ import { SITE_NAME, SITE_URL, TIMEZONE, SALON_NAME, SALON_ADDRESS, SALON_PHONE, 
 import { createSupabaseServiceRoleClient } from "@/lib/supabase";
 import type { Database } from "@/types/database";
 import { recordEvent } from "./events";
+import { renderConfirmationEmail, renderReminderEmail, renderCancellationEmail } from "@/lib/email-renderer";
+import { getDictionary } from "@/i18n/dictionaries";
 
 const FROM_EMAIL = process.env.NOTIFY_FROM_EMAIL ?? "";
 let resendClient: Resend | null = null;
@@ -24,7 +26,14 @@ function getResend() {
 }
 
 export async function sendEmailWithRetry(
-  params: { to: string; subject: string; text?: string; html?: string; meta?: Record<string, any> },
+  params: { 
+    to: string; 
+    subject: string; 
+    text?: string; 
+    html?: string; 
+    attachments?: Array<{ filename: string; content: string; type?: string }>; 
+    meta?: Record<string, any> 
+  },
   maxAttempts = 3,
 ): Promise<{ ok: boolean; attempt: number; emailId?: string }> {
   const resend = getResend();
@@ -32,9 +41,10 @@ export async function sendEmailWithRetry(
     try {
       if (resend) {
         const emailData: any = {
-          from: FROM_EMAIL,
+          from: `"Cotoka" <${FROM_EMAIL}>`,
           to: params.to,
           subject: params.subject,
+          replyTo: FROM_EMAIL,
         };
         
         if (params.html) {
@@ -42,6 +52,9 @@ export async function sendEmailWithRetry(
         }
         if (params.text) {
           emailData.text = params.text;
+        }
+        if (params.attachments) {
+          emailData.attachments = params.attachments;
         }
         
         const result = await resend.emails.send(emailData);
@@ -98,7 +111,7 @@ type ReservationWithRelations = ReservationRow & {
   > | null;
 };
 
-export async function sendReservationConfirmationEmail(reservationId: string) {
+export async function sendReservationConfirmationEmail(reservationId: string, locale: string = 'ja') {
   const supabase = createSupabaseServiceRoleClient() as any;
   const { data, error } = await supabase
     .from("reservations")
@@ -114,26 +127,22 @@ export async function sendReservationConfirmationEmail(reservationId: string) {
     return;
   }
 
-  const subject = `[${SITE_NAME}] ご予約が確定しました (${joined.code})`;
-  const start = formatInTimeZone(
-    joined.start_at,
-    TIMEZONE,
-    "yyyy年MM月dd日 (EEE) HH:mm",
-  );
-  const body = `\
-${joined.customer_name} 様\n\n${SALON_NAME} のご予約ありがとうございます。以下の内容で確定しました。\n\n- 予約番号: ${joined.code}\n- メニュー: ${joined.service?.name ?? "未設定"}\n- 日時: ${start}\n- 担当: ${joined.staff?.display_name ?? "未定"}\n\n店舗情報:\n- 店名: ${SALON_NAME}\n- 住所: ${SALON_ADDRESS.streetAddress}（${SALON_ADDRESS.addressLocality} ${SALON_ADDRESS.addressRegion}）\n- 電話: ${SALON_PHONE || "—"}\n- 地図: ${SALON_MAP_URL}\n\nキャンセル規定:\n${CANCEL_POLICY_TEXT}\n\nご来店を心よりお待ちしております。\n\n${SITE_NAME}\n${SITE_URL}\n`;
+  // 新しいテンプレートシステムを使用
+  const emailContent = await renderConfirmationEmail(joined, locale);
 
   const result = await sendEmailWithRetry({
     to: joined.customer_email,
-    subject,
-    text: body,
-    meta: { kind: "confirmation", reservation_id: reservationId, code: joined.code },
+    subject: emailContent.subject,
+    html: emailContent.html,
+    attachments: emailContent.icsAttachment ? [emailContent.icsAttachment] : undefined,
+    meta: { kind: "confirmation", reservation_id: reservationId, code: joined.code, locale },
   });
 
   if (result.ok) {
     await recordEvent("reservation.confirmation.sent", {
       reservation_id: reservationId,
       customer_email: joined.customer_email,
+      locale,
     } as any);
   }
 }
@@ -190,20 +199,18 @@ export async function processReservationReminders(
         continue;
       }
 
-      const subject = `[${SITE_NAME}] ご予約${hours}時間前のリマインダー (${reservation.code})`;
-      const start = formatInTimeZone(
-        reservation.start_at,
-        TIMEZONE,
-        "yyyy年MM月dd日 (EEE) HH:mm",
-      );
-      const body = `\
-${reservation.customer_name} 様\n\nまもなくご予約のお時間となります。\n\n- 予約番号: ${reservation.code}\n- メニュー: ${reservation.service?.name ?? "未設定"}\n- 日時: ${start}\n- 担当: ${reservation.staff?.display_name ?? "未定"}\n\n店舗情報:\n- 店名: ${SALON_NAME}\n- 住所: ${SALON_ADDRESS.streetAddress}\n- 地図: ${SALON_MAP_URL}\n\nキャンセル規定:\n${CANCEL_POLICY_TEXT}\n`;
+      // 予約のロケールを取得（デフォルトは日本語）
+      const locale = reservation.locale || 'ja';
+      
+      // 新しいテンプレートシステムを使用
+      const emailContent = await renderReminderEmail(reservation, locale, hours);
 
       const result = await sendEmailWithRetry({
         to: reservation.customer_email,
-        subject,
-        text: body,
-        meta: { kind: "reminder", hours_before: hours, reservation_id: reservation.id },
+        subject: emailContent.subject,
+        html: emailContent.html,
+        attachments: emailContent.icsAttachment ? [emailContent.icsAttachment] : undefined,
+        meta: { kind: "reminder", hours_before: hours, reservation_id: reservation.id, locale },
       });
 
       if (result.ok) {

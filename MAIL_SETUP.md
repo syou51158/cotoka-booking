@@ -14,15 +14,74 @@ Cotoka Booking システムでは、以下のメール送信機能を提供し�
 
 1. [Resend](https://resend.com) にアクセス
 2. アカウントを作成
-3. ドメインを追加・認証
+3. ドメインを追加・認証（詳細は下記参照）
 
-### 2. APIキーの取得
+### 2. ドメイン認証設定（DKIM）
+
+#### 2.1 Resendでのドメイン追加
+
+1. Resendダッシュボードで「Domains」に移動
+2. 「Add Domain」をクリック
+3. `cotoka.jp` を入力して追加
+
+#### 2.2 DNS設定（ムームードメイン）
+
+Resendでドメイン追加後、以下のDNSレコードが表示されます：
+
+**必要なCNAMEレコード例：**
+```
+# DKIM認証用
+resend._domainkey.cotoka.jp → resend1._domainkey.resend.com
+resend2._domainkey.cotoka.jp → resend2._domainkey.resend.com
+
+# SPF/DMARC（TXTレコード）
+cotoka.jp → "v=spf1 include:_spf.resend.com ~all"
+_dmarc.cotoka.jp → "v=DMARC1; p=quarantine; rua=mailto:dmarc@cotoka.jp"
+```
+
+**ムームードメインでの設定手順：**
+
+1. [ムームードメイン](https://muumuu-domain.com) にログイン
+2. 「ドメイン管理」→「DNS設定」を選択
+3. `cotoka.jp` を選択
+4. 「カスタム設定」を選択
+5. 以下のレコードを追加：
+
+| サブドメイン | 種別 | 内容 |
+|-------------|------|------|
+| `resend._domainkey` | CNAME | `resend1._domainkey.resend.com` |
+| `resend2._domainkey` | CNAME | `resend2._domainkey.resend.com` |
+| `@` | TXT | `v=spf1 include:_spf.resend.com ~all` |
+| `_dmarc` | TXT | `v=DMARC1; p=quarantine; rua=mailto:dmarc@cotoka.jp` |
+
+6. 「設定」をクリックして保存
+
+#### 2.3 認証確認
+
+1. DNS設定後、15分〜1時間程度で反映
+2. Resendダッシュボードで「Verify」をクリック
+3. ステータスが「Verified」になることを確認
+
+**確認コマンド（ローカル）：**
+```bash
+# DKIM確認
+dig TXT resend._domainkey.cotoka.jp
+dig TXT resend2._domainkey.cotoka.jp
+
+# SPF確認
+dig TXT cotoka.jp
+
+# DMARC確認
+dig TXT _dmarc.cotoka.jp
+```
+
+### 3. APIキーの取得
 
 1. Resendダッシュボードで「API Keys」に移動
 2. 新しいAPIキーを作成
 3. 適切な権限（Send emails）を設定
 
-### 3. 環境変数の設定
+### 4. 環境変数の設定
 
 `.env.local` または本番環境の環境変数に以下を設定：
 
@@ -34,6 +93,12 @@ NOTIFY_FROM_EMAIL=info@cotoka.jp
 # 開発環境でのドライラン有効化（本番では false）
 ALLOW_DEV_MOCKS=false
 ```
+
+**メール送信者設定：**
+- **From:** `"Cotoka" <info@cotoka.jp>` （表示名付き）
+- **Reply-To:** `info@cotoka.jp` （返信先統一）
+
+これにより、受信者には「Cotoka」として表示され、返信は `info@cotoka.jp` に届きます。
 
 ## 設定確認
 
