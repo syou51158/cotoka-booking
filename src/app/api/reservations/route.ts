@@ -30,8 +30,15 @@ const requestSchema = z.object({
 
 export async function POST(request: Request) {
   try {
+    console.log("[reservations] POST start");
     const json = await request.json();
     const parsed = requestSchema.parse(json);
+    console.log("[reservations] parsed input", {
+      serviceId: parsed.serviceId,
+      staffId: parsed.staffId,
+      start: parsed.start,
+      paymentOption: parsed.paymentOption,
+    });
 
     if (
       !parsed.agreements.terms ||
@@ -51,6 +58,7 @@ export async function POST(request: Request) {
       );
     }
 
+    console.log("[reservations] createPendingReservation start");
     const result = await createPendingReservation({
       serviceId: parsed.serviceId,
       staffId: parsed.staffId,
@@ -64,6 +72,11 @@ export async function POST(request: Request) {
       notes: parsed.notes,
       paymentOption: parsed.paymentOption,
     });
+    console.log("[reservations] createPendingReservation done", {
+      ok: !("error" in result),
+      code: "error" in result ? result.error.code : result.data?.code,
+      id: "error" in result ? undefined : result.data?.id,
+    });
 
     if ("error" in result) {
       const status = result.error.code === "SLOT_TAKEN" ? 409 : 400;
@@ -73,8 +86,10 @@ export async function POST(request: Request) {
     const data = result.data;
 
     const base = await resolveBaseUrl(request);
+    console.log("[reservations] base url", base);
 
     if (parsed.paymentOption === "pay_in_store") {
+      console.log("[reservations] pay_in_store flow");
       await markReservationPaid(data!.id, { status: "confirmed", payment_option: "pay_in_store" } as any);
       try {
         await sendReservationConfirmationEmail(data!.id);
@@ -92,18 +107,22 @@ export async function POST(request: Request) {
     }
 
     try {
+      console.log("[reservations] stripe checkout create start");
       const checkout = await createCheckoutSessionForReservation(
         data.id,
         request,
         base,
       );
+      console.log("[reservations] stripe checkout create done", {
+        ok: !("error" in checkout),
+      });
       if ("error" in checkout) {
         const res = NextResponse.json(checkout.error, { status: 400 });
         res.headers.set("X-Base-Url", base);
         return res;
       }
       const res = NextResponse.json(
-        { rid: data.id, id: data.id, code: data.code, checkoutUrl: checkout.data.url },
+        { rid: data.id, id: data.id, code: data.code, checkoutUrl: checkout.data.url, checkoutSessionId: checkout.data.id },
         { status: 200 },
       );
       res.headers.set("X-Base-Url", base);
@@ -111,6 +130,7 @@ export async function POST(request: Request) {
     } catch (err) {
       const message =
         err instanceof Error ? err.message : "Stripe処理に失敗しました";
+      console.error("[reservations] stripe error", message);
       const res = NextResponse.json(
         { code: "STRIPE_ERROR", message },
         { status: 400 },

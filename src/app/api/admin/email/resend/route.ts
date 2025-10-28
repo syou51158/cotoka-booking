@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createSupabaseServiceRoleClient } from "@/lib/supabase";
 import { verifyAdminAuth } from "@/lib/admin-auth";
 import { sendReservationConfirmationEmail, sendEmailWithRetry } from "@/server/notifications";
+import { getBusinessProfile } from "@/server/settings";
 import { renderCancellationEmail, renderReminderEmail } from "@/lib/email-renderer";
 import { recordEvent } from "@/server/events";
 import { checkRateLimit, checkEmailResendRateLimit } from '@/lib/rate-limit';
@@ -26,15 +27,8 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  // 本番環境での管理者ドメイン検証
-  if (process.env.NODE_ENV === 'production') {
-    const allowedDomains = process.env.ADMIN_EMAIL_DOMAINS?.split(',') || [];
-    const userDomain = authResult.user?.email?.split('@')[1];
-    if (!userDomain || !allowedDomains.includes(userDomain)) {
-      console.warn(`Unauthorized admin access attempt: ${authResult.user?.email}`);
-      return NextResponse.json({ error: 'Unauthorized domain' }, { status: 403 });
-    }
-  }
+  // 本番環境では追加のセキュリティチェック（管理者クッキー認証済み）
+  // 現在の管理者認証はクッキー方式のため、メールドメイン検証は行わない
 
   try {
     const body = await request.json();
@@ -126,12 +120,33 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    if (!reservation.customer_email) {
+      return NextResponse.json(
+        { error: "予約にメールアドレスがありません" },
+        { status: 400 }
+      );
+    }
+
     // 予約のロケールを取得（デフォルトは日本語）
-    const locale = reservation.locale || 'ja';
+    const rawLocale: string | null = reservation.locale;
+    const locale: 'ja' | 'en' | 'zh' = rawLocale === 'en' || rawLocale === 'zh' ? rawLocale : 'ja';
 
-
+    // レンダラーが期待する形に変換
+    const baseReservation = {
+      id: reservation.id,
+      customer_name: reservation.customer_name,
+      customer_email: reservation.customer_email,
+      start_at: reservation.start_at,
+      total_amount: reservation.amount_total_jpy,
+      status: reservation.status,
+      code: reservation.code,
+      notes: reservation.notes ?? undefined,
+      service: reservation.service ? { name: reservation.service.name, duration_min: 60 } : null,
+      staff: reservation.staff ? { display_name: reservation.staff.display_name, email: "" } : null,
+    };
 
     try {
+      const profile = await getBusinessProfile();
       // 種別に応じてメール送信
       switch (kind) {
         case "confirmation":
@@ -140,41 +155,44 @@ export async function POST(request: NextRequest) {
         case "cancel":
           {
             const emailContent = await renderCancellationEmail({
-              ...reservation,
-              hasPrepayment: reservation.total_amount > 0
+              ...baseReservation,
+              hasPrepayment: baseReservation.total_amount > 0
             }, locale);
             
             await sendEmailWithRetry({
-              to: reservation.customer_email,
+              to: baseReservation.customer_email,
               subject: emailContent.subject,
               html: emailContent.html,
               meta: { kind: "cancellation", reservation_id: reservation.id, locale },
+              from: profile.email_from,
             });
           }
           break;
         case "24h":
           {
-            const emailContent = await renderReminderEmail(reservation, '24h', locale);
+            const emailContent = await renderReminderEmail(baseReservation, '24h', locale);
             
             await sendEmailWithRetry({
-              to: reservation.customer_email,
+              to: baseReservation.customer_email,
               subject: emailContent.subject,
               html: emailContent.html,
               attachments: emailContent.attachments,
               meta: { kind: "reminder", hours_before: 24, reservation_id: reservation.id, locale },
+              from: profile.email_from,
             });
           }
           break;
         case "2h":
           {
-            const emailContent = await renderReminderEmail(reservation, '2h', locale);
+            const emailContent = await renderReminderEmail(baseReservation, '2h', locale);
             
             await sendEmailWithRetry({
-              to: reservation.customer_email,
+              to: baseReservation.customer_email,
               subject: emailContent.subject,
               html: emailContent.html,
               attachments: emailContent.attachments,
               meta: { kind: "reminder", hours_before: 2, reservation_id: reservation.id, locale },
+              from: profile.email_from,
             });
           }
           break;
@@ -189,7 +207,7 @@ export async function POST(request: NextRequest) {
         source: "admin_resend",
         customer_email: reservation.customer_email,
         locale,
-        provider: "resend"
+        provider: "smtp"
       });
 
       return NextResponse.json({

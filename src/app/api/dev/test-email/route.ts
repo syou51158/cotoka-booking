@@ -1,18 +1,67 @@
 import { NextRequest, NextResponse } from "next/server";
+import { sendMailSMTP } from "@/server/email/smtp";
 import { sendEmailWithRetry } from "@/server/notifications";
+import { getBusinessProfile } from "@/server/settings";
+
+const isDevAllowed = process.env.ALLOW_DEV_MOCKS === "true";
+
+export async function GET(request: NextRequest) {
+  if (!isDevAllowed) {
+    return NextResponse.json({ ok: false, message: "Disabled in this environment" }, { status: 403 });
+  }
+
+  try {
+    const url = new URL(request.url);
+    const to = url.searchParams.get("to");
+    const host = process.env.SMTP_HOST || null;
+    const user = process.env.SMTP_USER || null;
+    const profile = await getBusinessProfile();
+
+    if (to) {
+      const { messageId } = await sendMailSMTP({
+        to,
+        subject: "Cotoka SMTP テストメール",
+        html: `<div style=\"font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;\">\n<h2 style=\"color: #333;\">SMTPテスト</h2>\n<p style=\"color: #555;\">このメールは Cotoka Booking のSMTPテスト送信です。</p>\n<p style=\"margin-top:12px;color:#777;font-size:12px;\">provider: smtp / host: ${host ?? "-"} / user: ${user ?? "-"}</p>\n</div>`,
+        from: profile.email_from,
+      });
+      return NextResponse.json({ ok: true, provider: "smtp", messageId });
+    }
+
+    return NextResponse.json({
+      ok: true,
+      provider: "smtp",
+      config: { host, user },
+      usage: {
+        method: "GET",
+        example: "/api/dev/test-email?to=recipient@example.com",
+      },
+    });
+  } catch (error) {
+    return NextResponse.json({
+      ok: false,
+      provider: "smtp",
+      error: error instanceof Error ? error.message : String(error),
+    }, { status: 500 });
+  }
+}
 
 export async function POST(request: NextRequest) {
+  if (!isDevAllowed) {
+    return NextResponse.json({ ok: false, message: "Disabled in this environment" }, { status: 403 });
+  }
+
   try {
     const body = await request.json();
     const { to, subject, content } = body;
+    const profile = await getBusinessProfile();
 
     if (!to || !subject || !content) {
       return NextResponse.json({
-        error: "Missing required fields: to, subject, content"
+        ok: false,
+        error: "Missing required fields: to, subject, content",
       }, { status: 400 });
     }
 
-    // テストメール送信
     const result = await sendEmailWithRetry({
       to,
       subject,
@@ -27,53 +76,29 @@ export async function POST(request: NextRequest) {
           </p>
         </div>
       `,
-      meta: {
-        event_type: "email_test",
-        reservation_id: null,
-      },
+      meta: { event_type: "email_test", reservation_id: null },
+      from: profile.email_from,
     });
 
     if (result.ok) {
       return NextResponse.json({
-        success: true,
-        message: "Test email sent successfully",
+        ok: true,
+        provider: "smtp",
         emailId: result.emailId,
         attempt: result.attempt,
       });
     } else {
       return NextResponse.json({
-        success: false,
-        message: "Failed to send test email",
+        ok: false,
+        provider: "smtp",
         attempt: result.attempt,
       }, { status: 500 });
     }
   } catch (error) {
     return NextResponse.json({
-      success: false,
-      message: "Internal server error",
+      ok: false,
+      provider: "smtp",
       error: error instanceof Error ? error.message : String(error),
     }, { status: 500 });
   }
-}
-
-export async function GET(request: NextRequest) {
-  const resendApiKey = process.env.RESEND_API_KEY;
-  const fromEmail = process.env.NOTIFY_FROM_EMAIL;
-
-  return NextResponse.json({
-    message: "Test email endpoint",
-    config: {
-      hasResendKey: Boolean(resendApiKey && resendApiKey.length > 0),
-      hasFromEmail: Boolean(fromEmail && fromEmail.length > 0),
-      fromEmailMasked: fromEmail ? fromEmail.replace(/(.{2}).*(@.*)/, "$1***$2") : null,
-    },
-    usage: {
-      method: "POST",
-      body: {
-        to: "recipient@example.com",
-        subject: "Test Subject",
-        content: "Test message content"
-      }
-    }
-  });
 }

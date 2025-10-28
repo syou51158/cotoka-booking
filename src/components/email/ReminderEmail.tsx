@@ -29,6 +29,12 @@ interface ReminderEmailProps {
     apple: string;
     ics: string;
   };
+  brand?: {
+    siteName?: string;
+    addressLine?: string;
+    phone?: string;
+    websiteUrl?: string;
+  };
 }
 
 export function ReminderEmail({ 
@@ -36,12 +42,11 @@ export function ReminderEmail({
   locale, 
   type,
   reservation, 
-  calendarLinks 
+  calendarLinks,
+  brand,
 }: ReminderEmailProps) {
   const serviceName = reservation.service?.name || 'サービス';
-  const subject = type === '24h' 
-    ? dict.email.reminder.subject24h.replace('{serviceName}', serviceName)
-    : dict.email.reminder.subject2h.replace('{serviceName}', serviceName);
+  // subjectはレンダラー側で生成
   
   const title = type === '24h' 
     ? dict.email.reminder.title24h 
@@ -50,11 +55,15 @@ export function ReminderEmail({
   const message = type === '24h' 
     ? dict.email.reminder.message24h 
     : dict.email.reminder.message2h;
+
+  const salonAddressLine = brand?.addressLine ?? dict.email.confirmation.location.address;
+  const salonPhoneLine = brand?.phone ?? dict.email.common.footer.phone;
   
   return (
     <EmailLayout 
       dict={dict} 
       previewText={`${title} - ${serviceName}`}
+      brand={brand}
     >
       {/* Title */}
       <h2 style={{
@@ -243,14 +252,14 @@ export function ReminderEmail({
           margin: '0 0 8px 0',
           fontSize: '14px'
         }}>
-          〒150-0001 東京都渋谷区神宮前1-1-1
+          {salonAddressLine}
         </p>
         <p style={{
           margin: 0,
           fontSize: '14px',
           color: '#166534'
         }}>
-          JR原宿駅より徒歩3分
+          {dict.email.confirmation.location.directions}
         </p>
       </div>
 
@@ -273,7 +282,7 @@ export function ReminderEmail({
           fontSize: '14px',
           color: '#6b7280'
         }}>
-          {dict.email.common.footer.phone}
+          {salonPhoneLine}
         </p>
       </div>
     </EmailLayout>

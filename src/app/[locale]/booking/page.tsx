@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { getDictionary } from "@/i18n/dictionaries";
 import { formatCurrency, formatDuration } from "@/lib/format";
 import { FALLBACK_SERVICES } from "@/lib/config";
+import { getBusinessProfile } from "@/server/settings";
 import BookingHero from "@/components/booking/hero";
 import ServiceCard from "@/components/booking/service-card";
 
@@ -44,6 +45,8 @@ export default async function BookingIndexPage({ params }: Props) {
   }
   const resolved = await params;
   const locale = resolved.locale;
+  const profile = await getBusinessProfile();
+  const mapUrl = profile.map_url ?? undefined;
   const dict = getDictionary(locale);
 
   // 名前の文字種で日本語/英語を判定（カテゴリ列が無い前提）
@@ -71,7 +74,7 @@ export default async function BookingIndexPage({ params }: Props) {
         ctaLabel={dict.services.title}
         eyebrow={dict.booking.steps.service}
         secondaryCtaLabel={dict.booking.hero.secondaryCta}
-        secondaryCtaHref={dict.booking.hero.secondaryHref || "/#access"}
+        secondaryCtaHref={mapUrl}
       />
 
       <Card className="border-slate-200 bg-white rounded-2xl shadow-md">
@@ -84,12 +87,12 @@ export default async function BookingIndexPage({ params }: Props) {
           </div>
           <div className="flex flex-col gap-2 sm:flex-row">
             <Button asChild variant="secondary" className="w-full sm:w-auto">
-              <a href="https://maps.app.goo.gl/4i7d4gRZdVhtzK4w7" target="_blank" rel="noreferrer">
+              <a href={mapUrl} target="_blank" rel="noreferrer">
                 Googleマップで見る
               </a>
             </Button>
             <Button asChild variant="outline" className="w-full sm:w-auto">
-              <a href="https://www.google.com/maps/place/Cotoka+Relax+%26+Beauty+SPA" target="_blank" rel="noreferrer">
+              <a href={mapUrl} target="_blank" rel="noreferrer">
                 クチコミを読む
               </a>
             </Button>

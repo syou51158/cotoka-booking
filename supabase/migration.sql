@@ -208,6 +208,13 @@ begin
       with check (true);
   end if;
   if not exists (
+    select 1 from pg_policies where schemaname = 'public' and tablename = 'staff' and policyname = 'Public can read active staff'
+  ) then
+    create policy "Public can read active staff" on public.staff
+      for select
+      using (active = true);
+  end if;
+  if not exists (
     select 1 from pg_policies where schemaname = 'public' and tablename = 'rooms' and policyname = 'Admin manage rooms'
   ) then
     create policy "Admin manage rooms" on public.rooms

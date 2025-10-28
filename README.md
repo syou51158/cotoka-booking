@@ -29,11 +29,14 @@ ADMIN_PASSCODE=change-me
 RESEND_API_KEY=
 NOTIFY_FROM_EMAIL=no-reply@example.com
 CRON_SECRET=local-cron-secret
+ALLOW_DEV_MOCKS=false
+NEXT_PUBLIC_ALLOW_DEV_MOCKS=false
 ```
 
 - `ADMIN_PASSCODE`: `/admin` ログイン用のワンタイムパスコード
 - `RESEND_API_KEY` / `NOTIFY_FROM_EMAIL`: 予約確定メール・リマインダー送信用
 - `CRON_SECRET`: リマインダー用 Cron エンドポイントを保護するための shared secret
+- `ALLOW_DEV_MOCKS` / `NEXT_PUBLIC_ALLOW_DEV_MOCKS`: 開発用モックデータの許可（本番は `false` 推奨）
 
 ## URL 生成ポリシー（本番運用）
 
@@ -49,6 +52,7 @@ CRON_SECRET=local-cron-secret
 - `/[locale]/success` 到達時に自動確認が走らない場合、`rid` と `cs_id` の両方がURLに含まれているか確認
 - `events` テーブルの `payment_confirm_attempt` / `reservation_paid` を確認（失敗理由、`url_base`、`cs_id_masked` など）
 - Stripe Webhook の `constructEvent` 検証に失敗する場合は `STRIPE_WEBHOOK_SECRET` を確認し、App Router では `await req.text()` を用いること
+- 環境検査: `GET /api/health/env` で必須キーの設定状況を確認 / `http://localhost:3000/dev/env` でUI表示
 
 ## セットアップ
 
@@ -198,7 +202,7 @@ npm run dev
 4. 2 ブラウザで同一枠を同時予約し、片方が `409 SLOT_TAKEN` になること
 5. `/admin` で予約一覧が表示され、シフト/営業時間 CRUD が反映されること
 6. `/ja/manage` で予約番号 + メール/電話から照会・更新・キャンセルができること
-7. `POST /api/cron/reminders` を叩き、対象予約にメールが送信されること（Resend ログで確認）
+7. `POST /api/cron/reminders` を叩き、対象予約にメールが送信されること（SMTP 接続で送信。`GET /api/health/email` とイベントログで確認可能）
 
 ## 補足
 

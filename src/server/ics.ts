@@ -7,6 +7,8 @@ interface MakeIcsArgs {
   end: string | Date;
   location: string;
   description?: string;
+  organizer?: { name: string; email: string };
+  url?: string;
 }
 
 function toDate(value: string | Date) {
@@ -34,6 +36,8 @@ export function makeIcs({
   end,
   location,
   description = "",
+  organizer,
+  url,
 }: MakeIcsArgs) {
   const startDate = toDate(start);
   const endDate = toDate(end);
@@ -56,9 +60,12 @@ export function makeIcs({
     `SUMMARY:${escapeText(title)}`,
     `DESCRIPTION:${escapeText(description)}`,
     `LOCATION:${escapeText(location)}`,
+    organizer ? `ORGANIZER;CN=${escapeText(organizer.name)}:mailto:${organizer.email}` : undefined,
+    url ? `URL:${escapeText(url)}` : undefined,
+    "STATUS:CONFIRMED",
+    "TRANSP:OPAQUE",
     "END:VEVENT",
     "END:VCALENDAR",
   ];
-
-  return body.join("\r\n");
+  return body.filter(Boolean).join("\r\n");
 }

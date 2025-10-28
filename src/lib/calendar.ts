@@ -1,3 +1,5 @@
+import { SALON_NAME, SALON_ADDRESS } from '@/lib/config';
+
 interface CalendarEvent {
   title: string;
   description: string;
@@ -26,7 +28,7 @@ export function generateICS(event: CalendarEvent): string {
   const uid = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}@cotoka.jp`;
   const now = new Date();
 
-  let icsContent = [
+  const icsContent = [
     'BEGIN:VCALENDAR',
     'VERSION:2.0',
     'PRODID:-//Cotoka//Booking System//EN',
@@ -105,7 +107,12 @@ export function createReservationCalendarEvent(
     } | null;
     notes?: string;
   },
-  locale: string = 'ja'
+  locale: string = 'ja',
+  brand?: {
+    siteName?: string;
+    addressLine?: string;
+    organizerEmail?: string;
+  }
 ): CalendarEvent {
   const startTime = new Date(reservation.start_at);
   const duration = reservation.service?.duration_min || 60;
@@ -114,10 +121,11 @@ export function createReservationCalendarEvent(
   const serviceName = reservation.service?.name || 'サービス';
   const staffName = reservation.staff?.display_name || 'スタッフ';
   
+  const siteName = brand?.siteName ?? SALON_NAME;
   const titles = {
-    ja: `${serviceName} - Cotoka SPA`,
-    en: `${serviceName} - Cotoka SPA`,
-    zh: `${serviceName} - Cotoka SPA`
+    ja: `${serviceName} - ${siteName}`,
+    en: `${serviceName} - ${siteName}`,
+    zh: `${serviceName} - ${siteName}`
   };
 
   const descriptions = {
@@ -126,10 +134,11 @@ export function createReservationCalendarEvent(
     zh: `服務: ${serviceName}\n理療師: ${staffName}\n客戶: ${reservation.customer_name}${reservation.notes ? `\n備註: ${reservation.notes}` : ''}`
   };
 
+  const salonAddressLine = brand?.addressLine ?? `〒${SALON_ADDRESS.postalCode} ${SALON_ADDRESS.addressRegion}${SALON_ADDRESS.addressLocality} ${SALON_ADDRESS.streetAddress}`;
   const locations = {
-    ja: '〒150-0001 東京都渋谷区神宮前1-1-1 Cotoka Relax & Beauty SPA',
-    en: '1-1-1 Jingumae, Shibuya-ku, Tokyo 150-0001 Cotoka Relax & Beauty SPA',
-    zh: '〒150-0001 東京都渋谷区神宮前1-1-1 Cotoka Relax & Beauty SPA'
+    ja: `${salonAddressLine} ${siteName}`,
+    en: `${salonAddressLine} ${siteName}`,
+    zh: `${salonAddressLine} ${siteName}`
   };
 
   return {
@@ -139,8 +148,8 @@ export function createReservationCalendarEvent(
     startTime,
     endTime,
     organizer: {
-      name: 'Cotoka Relax & Beauty SPA',
-      email: 'info@cotoka.jp'
+      name: siteName,
+      email: brand?.organizerEmail ?? 'info@cotoka.jp'
     }
   };
 }

@@ -28,21 +28,30 @@ interface ConfirmationEmailProps {
     apple: string;
     ics: string;
   };
+  brand?: {
+    siteName?: string;
+    addressLine?: string;
+    phone?: string;
+    websiteUrl?: string;
+  };
 }
 
 export function ConfirmationEmail({ 
   dict, 
   locale, 
   reservation, 
-  calendarLinks 
+  calendarLinks,
+  brand,
 }: ConfirmationEmailProps) {
   const serviceName = reservation.service?.name || 'サービス';
-  const subject = dict.email.confirmation.subject.replace('{serviceName}', serviceName);
+  const salonAddressLine = brand?.addressLine ?? dict.email.confirmation.location.address;
+  const salonPhoneLine = brand?.phone ?? dict.email.common.footer.phone;
   
   return (
     <EmailLayout 
       dict={dict} 
       previewText={`${dict.email.confirmation.title} - ${serviceName}`}
+      brand={brand}
     >
       {/* Title */}
       <h2 style={{
@@ -256,7 +265,7 @@ export function ConfirmationEmail({
           margin: '0 0 8px 0',
           fontSize: '14px'
         }}>
-          {dict.email.confirmation.location.address}
+          {salonAddressLine}
         </p>
         <p style={{
           margin: 0,
@@ -264,8 +273,8 @@ export function ConfirmationEmail({
           color: '#166534'
         }}>
           {dict.email.confirmation.location.directions}
-        </p>
-      </div>
+      </p>
+    </div>
 
       {/* Notes */}
       <div style={{
@@ -315,7 +324,7 @@ export function ConfirmationEmail({
           fontSize: '14px',
           color: '#6b7280'
         }}>
-          {dict.email.common.footer.phone}
+          {salonPhoneLine}
         </p>
       </div>
     </EmailLayout>

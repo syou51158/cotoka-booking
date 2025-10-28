@@ -15,6 +15,7 @@ const dictionaries = {
         title: "メニューを選んで予約を開始",
         subtitle: "内容と料金を確認し、オンラインで簡単にご予約できます。",
         cta: "予約を開始",
+        secondaryCta: "Googleマップを開く",
       },
       steps: {
         service: "Step 1：メニュー選択",
@@ -202,6 +203,7 @@ const dictionaries = {
         title: "Choose a service to start booking",
         subtitle: "Review details and price, then book online easily.",
         cta: "Start booking",
+        secondaryCta: "Open Google Maps",
       },
       steps: {
         service: "Step 1: Choose a service",
@@ -389,6 +391,7 @@ const dictionaries = {
         title: "選擇服務開始預約",
         subtitle: "查看內容和價格，線上輕鬆預約。",
         cta: "開始預約",
+        secondaryCta: "在 Google 地圖查看",
       },
       steps: {
         service: "步驟1：選擇服務",

@@ -24,20 +24,29 @@ interface CancellationEmailProps {
     } | null;
   };
   rebookingUrl: string;
+  brand?: {
+    siteName?: string;
+    addressLine?: string;
+    phone?: string;
+    websiteUrl?: string;
+  };
 }
 
 export function CancellationEmail({ 
   dict, 
   locale, 
   reservation, 
-  rebookingUrl 
+  rebookingUrl,
+  brand,
 }: CancellationEmailProps) {
   const serviceName = reservation.service?.name || 'サービス';
+  const salonPhoneLine = brand?.phone ?? dict.email.common.footer.phone;
   
   return (
     <EmailLayout 
       dict={dict} 
       previewText={`${dict.email.cancellation.title} - ${serviceName}`}
+      brand={brand}
     >
       {/* Title */}
       <h2 style={{
@@ -251,7 +260,7 @@ export function CancellationEmail({
           fontSize: '14px',
           color: '#6b7280'
         }}>
-          {dict.email.common.footer.phone}
+          {salonPhoneLine}
         </p>
       </div>
     </EmailLayout>

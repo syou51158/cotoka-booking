@@ -1,10 +1,10 @@
-import { NextResponse } from "next/server";
 import { getStripe } from "@/server/stripe";
 import { markReservationPaid } from "@/server/reservations";
 import { sendReservationConfirmationEmail } from "@/server/notifications";
 import { recordEvent } from "@/server/events";
 import { createSupabaseServiceRoleClient } from "@/lib/supabase";
 import { resolveBaseUrl } from "@/lib/base-url";
+import { HttpError, json, assertEnv } from "@/lib/http";
 
 export async function GET(request: Request) {
   const url = new URL(request.url);
@@ -12,7 +12,7 @@ export async function GET(request: Request) {
   const csId = url.searchParams.get("cs_id");
 
   if (!rid || !csId) {
-    return NextResponse.json({ message: "rid と cs_id は必須です" }, { status: 400 });
+    return json({ message: "missing rid/cs_id" }, 400);
   }
 
   const base = await resolveBaseUrl(request);
@@ -41,40 +41,36 @@ export async function GET(request: Request) {
   }
 
   try {
-    const allowDevMocks = process.env.ALLOW_DEV_MOCKS === "true";
+    assertEnv(["STRIPE_SECRET_KEY"]);
 
     let paid = false;
     let amountTotal: number | null = null;
     let paymentIntentId: string | null = null;
 
-    if (!allowDevMocks) {
-      const stripe = getStripe();
-      const session = await stripe.checkout.sessions.retrieve(csId);
+    const stripe = getStripe();
+    const session = await stripe.checkout.sessions.retrieve(csId);
 
-      if (
-        session.payment_status === "paid" ||
-        (session as any).status === "complete"
-      ) {
-        paid = true;
-        amountTotal = session.amount_total ?? null;
-        paymentIntentId = typeof session.payment_intent === "string"
-          ? session.payment_intent
-          : session.payment_intent?.id ?? null;
-
-        const reservationIdFromMeta = session.metadata?.reservationId;
-        if (reservationIdFromMeta && reservationIdFromMeta !== rid) {
-          await recordEvent("payment_confirm_attempt", {
-            reservation_id: rid,
-            result: "failed",
-            reason: "session_meta_mismatch",
-            url_base: base,
-            cs_id_masked: csMasked,
-          });
-          return NextResponse.json({ message: "不正なセッション" }, { status: 400 });
-        }
-      }
-    } else {
+    if (
+      session.payment_status === "paid" ||
+      (session as any).status === "complete"
+    ) {
       paid = true;
+      amountTotal = session.amount_total ?? null;
+      paymentIntentId = typeof session.payment_intent === "string"
+        ? session.payment_intent
+        : session.payment_intent?.id ?? null;
+
+      const reservationIdFromMeta = session.metadata?.reservationId;
+      if (reservationIdFromMeta && reservationIdFromMeta !== rid) {
+        await recordEvent("payment_confirm_attempt", {
+          reservation_id: rid,
+          result: "failed",
+          reason: "session_meta_mismatch",
+          url_base: base,
+          cs_id_masked: csMasked,
+        });
+        throw new HttpError(400, "invalid_session");
+      }
     }
 
     if (!paid) {
@@ -85,7 +81,7 @@ export async function GET(request: Request) {
         url_base: base,
         cs_id_masked: csMasked,
       });
-      return NextResponse.json({ message: "支払い未完了です" }, { status: 409 });
+      return json({ message: "not_paid" }, 409);
     }
 
     await markReservationPaid(rid, {
@@ -116,10 +112,14 @@ export async function GET(request: Request) {
       cs_id_masked: csMasked,
     });
 
-    return NextResponse.json({ status: "ok" });
+    return json({ status: "ok" }, 200);
   } catch (e) {
     const message = e instanceof Error ? e.message : "Unknown error";
     await recordEvent("stripe.confirm_error", { message, reservation_id: rid, url_base: base });
-    return NextResponse.json({ message: "確認に失敗しました" }, { status: 500 });
+    if (e instanceof HttpError) {
+      return json({ message: e.message }, e.status);
+    }
+    // Stripeの検証失敗などは500に正規化
+    return json({ message: "internal_error" }, 500);
   }
 }

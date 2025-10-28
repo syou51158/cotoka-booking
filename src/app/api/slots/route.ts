@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getAvailableSlots } from "@/server/slots";
+import { env } from "@/lib/env";
+import { assertEnv } from "@/lib/http";
 
 const bodySchema = z.object({
   serviceId: z.string().min(1),
@@ -58,20 +60,41 @@ export async function POST(request: Request) {
     const sourceParam = url.searchParams.get("source");
     const forceDb = url.searchParams.get("useDb") === "1" || sourceParam === "db";
     const forceMock = sourceParam === "mock";
-    const allowServerMocks = process.env.ALLOW_DEV_MOCKS === "true";
-    const allowUiMocks = process.env.NEXT_PUBLIC_ALLOW_DEV_MOCKS === "true";
-     if (allowServerMocks && (forceMock || (!forceDb && allowUiMocks))) {
-        const mockSlots = generateMockSlots(serviceId, date, staffId ?? undefined);
-        return NextResponse.json(mockSlots);
-      }
+    const allowServerMocks = env.ALLOW_DEV_MOCKS === "true";
+    const isDev = process.env.NODE_ENV !== "production";
+
+    // 明示的なモック指定（開発時のみ、フラグが有効な場合）
+    if (allowServerMocks && isDev && forceMock) {
+      const mockSlots = generateMockSlots(serviceId, date, staffId ?? undefined);
+      return NextResponse.json(mockSlots);
+    }
     
-    // 本番環境では実際のデータベースから取得
-    const slots = await getAvailableSlots({
-      serviceId,
-      date,
-      staffId: staffId ?? undefined,
-    });
-    return NextResponse.json(slots);
+    // 本番/既定では実際のデータベースから取得
+    try {
+      // ENV不足は503
+      assertEnv(["SUPABASE_URL", "SUPABASE_SERVICE_ROLE_KEY"]);
+      const slots = await getAvailableSlots({
+        serviceId,
+        date,
+        staffId: staffId ?? undefined,
+      });
+      return NextResponse.json(slots);
+    } catch (e: any) {
+      const msg = e?.message ?? String(e);
+      const isServiceRoleMissing = /service role configuration missing/i.test(msg);
+      const status = String(msg).startsWith("MISSING_ENV")
+        ? 503
+        : isServiceRoleMissing
+        ? 503
+        : 500;
+      const message = status === 503
+        ? "スロットを取得するにはサービスロールキーが必要です。SUPABASE_SERVICE_ROLE_KEY を設定してください。"
+        : "Internal Server Error";
+      return NextResponse.json(
+        { message, error: msg },
+        { status },
+      );
+    }
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json({ message: error.message }, { status: 400 });

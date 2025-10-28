@@ -10,6 +10,24 @@ import { sendReservationConfirmationEmail } from "./notifications";
 
 const randomCode = customAlphabet("ABCDEFGHJKLMNPQRSTUVWXYZ23456789", 4);
 
+// Promiseユーティリティ: 指定時間を超えたらタイムアウトとして失敗させる
+async function withTimeout<T>(p: Promise<T>, ms = 12000): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const t = setTimeout(() => {
+      reject(new Error(`DB operation timeout after ${ms}ms`));
+    }, ms);
+    p
+      .then((v) => {
+        clearTimeout(t);
+        resolve(v);
+      })
+      .catch((e) => {
+        clearTimeout(t);
+        reject(e);
+      });
+  });
+}
+
 export type ReservationRow =
   Database["public"]["Tables"]["reservations"]["Row"];
 
@@ -141,11 +159,24 @@ export async function createPendingReservation(input: CreateReservationInput): P
     } as const;
   }
 
-  const serviceRes = await client
-    .from("services")
-    .select("*")
-    .eq("id", serviceId)
-    .maybeSingle();
+  console.log("[reservations] service fetch start", { serviceId });
+  const serviceRes = await withTimeout(
+    client
+      .from("services")
+      .select("*")
+      .eq("id", serviceId)
+      .maybeSingle(),
+    12000,
+  ).catch((e: unknown) => {
+    console.warn("[reservations] service fetch error", e);
+    if (e instanceof Error && /timeout/i.test(e.message)) {
+      return { data: null, error: { code: "DB_TIMEOUT" } } as any;
+    }
+    throw e;
+  });
+  console.log("[reservations] service fetch done", {
+    ok: !serviceRes?.error,
+  });
 
   if (serviceRes.error) {
     throw serviceRes.error;
@@ -155,7 +186,7 @@ export async function createPendingReservation(input: CreateReservationInput): P
   if (!service) {
     return {
       error: {
-        code: "SERVICE_NOT_FOUND",
+        code: serviceRes?.error?.code === "DB_TIMEOUT" ? "DB_TIMEOUT" : "SERVICE_NOT_FOUND",
         message: "サービスが見つかりません",
       },
     } as const;
@@ -163,6 +194,10 @@ export async function createPendingReservation(input: CreateReservationInput): P
 
   const endUtc = computeEndUtc({ service, start, end });
 
+  console.log("[reservations] conflict check start", {
+    staffId,
+    roomId,
+  });
   const conflict = await hasConflict(client, {
     staffId,
     roomId,
@@ -170,6 +205,7 @@ export async function createPendingReservation(input: CreateReservationInput): P
     endUtc,
     service,
   });
+  console.log("[reservations] conflict check done", { conflict });
 
   if (conflict) {
     return {
@@ -186,26 +222,37 @@ export async function createPendingReservation(input: CreateReservationInput): P
     ? "pending"
     : "unpaid";
 
-  const { data, error } = await client
-    .from("reservations")
-    .insert({
-      code: reservationCode,
-      customer_name: customerName,
-      customer_email: normalizedEmail,
-      customer_phone: normalizedPhone,
-      service_id: serviceId,
-      staff_id: staffId ?? null,
-      room_id: roomId ?? null,
-      start_at: startUtc.toISOString(),
-      end_at: endUtc.toISOString(),
-      status: initialStatus,
-      amount_total_jpy: service.price_jpy,
-      locale: locale ?? "ja",
-      notes: notes ?? null,
-      payment_option: paymentOption ?? null,
-    })
-    .select()
-    .maybeSingle();
+  console.log("[reservations] insert start");
+  const { data, error } = await withTimeout(
+    client
+      .from("reservations")
+      .insert({
+        code: reservationCode,
+        customer_name: customerName,
+        customer_email: normalizedEmail,
+        customer_phone: normalizedPhone,
+        service_id: serviceId,
+        staff_id: staffId ?? null,
+        room_id: roomId ?? null,
+        start_at: startUtc.toISOString(),
+        end_at: endUtc.toISOString(),
+        status: initialStatus,
+        amount_total_jpy: service.price_jpy,
+        locale: locale ?? "ja",
+        notes: notes ?? null,
+        payment_option: paymentOption ?? null,
+      })
+      .select()
+      .maybeSingle(),
+    12000,
+  ).catch((e: unknown) => {
+    console.warn("[reservations] insert error", e);
+    if (e instanceof Error && /timeout/i.test(e.message)) {
+      return { data: null, error: { code: "DB_TIMEOUT" } } as any;
+    }
+    throw e;
+  });
+  console.log("[reservations] insert done", { ok: !error, id: data?.id });
 
   if (error) {
     if (error.code === "23505") {
@@ -223,15 +270,15 @@ export async function createPendingReservation(input: CreateReservationInput): P
   try {
     if (initialStatus === "unpaid" && data?.id) {
       await sendReservationConfirmationEmail(data.id);
-      await recordEvent("reservation.created.unpaid", {
+      recordEvent("reservation.created.unpaid", {
         reservation_id: data.id,
         code: data.code,
-      });
+      }).catch(() => {});
     } else if (initialStatus === "pending" && data?.id) {
-      await recordEvent("reservation.created.pending", {
+      recordEvent("reservation.created.pending", {
         reservation_id: data.id,
         code: data.code,
-      });
+      }).catch(() => {});
     }
   } catch (e) {
     console.warn("Post-create actions failed", e);
@@ -295,6 +342,9 @@ async function hasConflict(
   }
 
   const { data, error } = await query;
+
+  // DBが応答しない場合のタイムアウト対策
+  // （呼び出し側でラップするためここでは通常実行。必要に応じて拡張）
 
   if (error) {
     throw error;

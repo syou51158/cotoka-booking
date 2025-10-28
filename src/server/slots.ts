@@ -70,30 +70,30 @@ async function resolveSlotInterval(
   {
     service,
     staffId,
-  }: { service: any; staffId?: string }
+  }: { service: { slot_interval_min?: number | null; [key: string]: unknown }; staffId?: string }
 ): Promise<number> {
   // 1) スタッフ個別設定
   if (staffId) {
-    const { data: staffRow } = await (client as any)
+    const { data: staffRow } = await client
       .from("staff")
       .select("slot_interval_min")
       .eq("id", staffId)
       .maybeSingle();
-    const staffInterval = (staffRow as any)?.slot_interval_min as number | null;
+    const staffInterval = staffRow?.slot_interval_min as number | null;
     if (staffInterval && staffInterval > 0) return staffInterval;
   }
 
   // 2) サービス別設定
-  const serviceInterval = (service as any)?.slot_interval_min as number | null;
+  const serviceInterval = service?.slot_interval_min;
   if (serviceInterval && serviceInterval > 0) return serviceInterval;
 
   // 3) グローバル設定
-  const { data: settings } = await (client as any)
+  const { data: settings } = await client
     .from("site_settings")
     .select("default_slot_interval_min")
     .limit(1)
     .maybeSingle();
-  const globalInterval = (settings as any)?.default_slot_interval_min as number | null;
+  const globalInterval = settings?.default_slot_interval_min as number | null;
   if (globalInterval && globalInterval > 0) return globalInterval;
 
   // 4) フォールバック（旧仕様）

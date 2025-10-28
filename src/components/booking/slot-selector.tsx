@@ -83,7 +83,9 @@ export default function SlotSelector({
         });
 
         if (!response.ok) {
-          throw new Error("Failed to load slots");
+          const payload = await response.json().catch(() => ({}));
+          const message = typeof (payload as any)?.message === "string" ? (payload as any).message : "Failed to load slots";
+          throw new Error(message);
         }
 
         const data = (await response.json()) as AvailableSlot[];

@@ -1,6 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import { loadStripe } from "@stripe/stripe-js";
+import type { Stripe as StripeJs } from "@stripe/stripe-js";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
@@ -128,11 +130,13 @@ export default function ConfirmReservationForm({
   const [devReservation, setDevReservation] =
     useState<ReservationResponse | null>(null);
   const [devCompleting, setDevCompleting] = useState(false);
+  const [stripeUrl, setStripeUrl] = useState<string | null>(null);
 
   type CreateReservationResult = {
     rid: string;
     nextUrl?: string;
     checkoutUrl?: string;
+    checkoutSessionId?: string;
     code?: string | null;
   };
 
@@ -193,8 +197,108 @@ export default function ConfirmReservationForm({
         return;
       }
       if (result.checkoutUrl) {
-        window.location.href = result.checkoutUrl;
+        // リダイレクトのフェールセーフ: replace を優先し、失敗時は新規タブを試行
+        setStripeUrl(result.checkoutUrl);
+        // Stripe.js によるリダイレクト（より堅牢）を優先
+        try {
+          if (result.checkoutSessionId && process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY) {
+            const stripeJs: StripeJs | null = await loadStripe(
+              process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY,
+            );
+            const redirect = await stripeJs?.redirectToCheckout({
+              sessionId: result.checkoutSessionId,
+            });
+            if (!redirect?.error) {
+              // 成功の場合はここで終了
+              return;
+            }
+          }
+        } catch {
+          // Stripe.js が使えない場合は従来の replace にフォールバック
+        }
+        // フォールバック: 従来のトップレベルナビゲーション
+        try {
+          window.location.replace(result.checkoutUrl);
+        } catch {
+          try {
+            window.open(result.checkoutUrl, "_blank", "noopener");
+          } catch {}
+        }
+        // しばらく進まない場合は手動リンクを提示
+        setTimeout(() => {
+          if (document.visibilityState === "visible") {
+            setErrorMessage(
+              "Stripeへの遷移に時間がかかっています。下のリンクから進んでください。",
+            );
+          }
+        }, 5000);
         return;
+      }
+
+      // フォールバック: /api/reservations が RID のみを返却した場合、
+      // 予約IDを用いて /api/stripe/checkout を叩いてセッションURLを取得して遷移する
+      if (result.rid && !result.checkoutUrl && !result.nextUrl) {
+        try {
+          const response = await fetch("/api/stripe/checkout", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ reservationId: result.rid }),
+          });
+          if (!response.ok) {
+            const data = await response.json().catch(() => ({}));
+            setErrorMessage(
+              (data as { message?: string }).message ??
+                "決済URLの取得に失敗しました",
+            );
+          } else {
+            const payload = await response.json().catch(() => ({}));
+            const url: string | undefined =
+              (payload?.data?.url as string | undefined) ??
+              (payload?.url as string | undefined);
+            const sessionId: string | undefined =
+              (payload?.data?.id as string | undefined) ??
+              (payload?.id as string | undefined);
+            if (url) {
+              setStripeUrl(url);
+              // Stripe.js を優先
+              try {
+                if (sessionId && process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY) {
+                  const stripeJs: StripeJs | null = await loadStripe(
+                    process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY,
+                  );
+                  const redirect = await stripeJs?.redirectToCheckout({ sessionId });
+                  if (!redirect?.error) {
+                    return;
+                  }
+                }
+              } catch {
+                // ignore
+              }
+              // フォールバック: 従来のトップレベルナビゲーション
+              try {
+                window.location.replace(url);
+              } catch {
+                try {
+                  window.open(url, "_blank", "noopener");
+                } catch {}
+              }
+              setTimeout(() => {
+                if (document.visibilityState === "visible") {
+                  setErrorMessage(
+                    "Stripeへの遷移に時間がかかっています。下のリンクから進んでください。",
+                  );
+                }
+              }, 5000);
+              return;
+            } else {
+              setErrorMessage("決済URLの取得に失敗しました");
+            }
+          }
+        } catch (err) {
+          setErrorMessage(
+            err instanceof Error ? err.message : "決済URLの取得に失敗しました",
+          );
+        }
       }
 
       setErrorMessage("不明なレスポンスです。もう一度お試しください。");
@@ -422,6 +526,16 @@ export default function ConfirmReservationForm({
         {errorMessage ? (
           <div id="confirm-error" className="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-600" role="alert" aria-live="polite">
             {errorMessage}
+          </div>
+        ) : null}
+
+        {stripeUrl ? (
+          <div className="rounded-md border border-slate-200 bg-white p-3 text-sm text-slate-700">
+            <p>
+              Stripeへ遷移中です。進まない場合は
+              <a href={stripeUrl} target="_blank" rel="noopener" className="font-semibold underline">こちら</a>
+              をクリックしてください。
+            </p>
           </div>
         ) : null}
 

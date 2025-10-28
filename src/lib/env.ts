@@ -1,7 +1,12 @@
 import { z } from "zod";
 
 // Expected Supabase project ref (hostname prefix)
-export const EXPECTED_PROJECT_REF = "zgakkegqaamppuwblxme";
+// Allow override via env; if not provided, skip mismatch check.
+const EXPECTED_PROJECT_REF_ENV = process.env.EXPECTED_PROJECT_REF;
+export const EXPECTED_PROJECT_REF =
+  EXPECTED_PROJECT_REF_ENV && EXPECTED_PROJECT_REF_ENV.length > 0
+    ? EXPECTED_PROJECT_REF_ENV
+    : null;
 
 const EnvSchema = z.object({
   SITE_URL: z.string().min(1),
@@ -41,8 +46,11 @@ function mask(value: string | null | undefined): string | null {
 
 const parsed = EnvSchema.safeParse({
   SITE_URL: process.env.SITE_URL,
-  SUPABASE_URL: process.env.SUPABASE_URL,
-  SUPABASE_ANON_KEY: process.env.SUPABASE_ANON_KEY,
+  // Allow fallback to NEXT_PUBLIC_* if server-side vars are not set
+  SUPABASE_URL:
+    process.env.SUPABASE_URL ?? process.env.NEXT_PUBLIC_SUPABASE_URL,
+  SUPABASE_ANON_KEY:
+    process.env.SUPABASE_ANON_KEY ?? process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
   SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY,
   NEXT_PUBLIC_DEFAULT_LOCALE: process.env.NEXT_PUBLIC_DEFAULT_LOCALE,
   NEXT_PUBLIC_TIMEZONE: process.env.NEXT_PUBLIC_TIMEZONE,
@@ -66,8 +74,10 @@ export const env = parsed.success
   ? parsed.data
   : {
       SITE_URL: process.env.SITE_URL ?? "",
-      SUPABASE_URL: process.env.SUPABASE_URL ?? "",
-      SUPABASE_ANON_KEY: process.env.SUPABASE_ANON_KEY ?? "",
+      SUPABASE_URL:
+        process.env.SUPABASE_URL ?? process.env.NEXT_PUBLIC_SUPABASE_URL ?? "",
+      SUPABASE_ANON_KEY:
+        process.env.SUPABASE_ANON_KEY ?? process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "",
       SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY,
       NEXT_PUBLIC_DEFAULT_LOCALE: process.env.NEXT_PUBLIC_DEFAULT_LOCALE ?? "ja",
       NEXT_PUBLIC_TIMEZONE: process.env.NEXT_PUBLIC_TIMEZONE ?? "Asia/Tokyo",
@@ -80,8 +90,9 @@ export const env = parsed.success
     };
 
 export const currentProjectRef = extractProjectRef(env.SUPABASE_URL);
-export const projectRefMismatch =
-  !!currentProjectRef && currentProjectRef !== EXPECTED_PROJECT_REF;
+export const projectRefMismatch = EXPECTED_PROJECT_REF
+  ? !!currentProjectRef && currentProjectRef !== EXPECTED_PROJECT_REF
+  : false;
 
 // Startup guard/logging
 if (projectRefMismatch) {

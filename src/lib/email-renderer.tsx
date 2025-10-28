@@ -4,6 +4,7 @@ import { CancellationEmail } from '@/components/email/CancellationEmail';
 import { getDictionary } from '@/i18n/dictionaries';
 import { createReservationCalendarEvent, generateCalendarLinks } from '@/lib/calendar';
 import type { SupportedLocale } from '@/lib/config';
+import { getBusinessProfile } from '@/server/settings';
 
 interface BaseReservation {
   id: string;
@@ -39,9 +40,21 @@ export async function renderConfirmationEmail(
   locale: SupportedLocale = 'ja'
 ): Promise<EmailTemplate> {
   const dict = getDictionary(locale);
+  const profile = await getBusinessProfile();
+  const brand = {
+    siteName: profile.salon_name,
+    addressLine: locale === 'en' ? (profile.address_en ?? profile.address_ja) : (locale === 'zh' ? (profile.address_zh ?? profile.address_ja) : profile.address_ja),
+    phone: profile.phone,
+    websiteUrl: profile.website_url,
+    mapUrl: profile.map_url,
+  };
   
   // Generate calendar event and links
-  const calendarEvent = createReservationCalendarEvent(reservation, locale);
+  const calendarEvent = createReservationCalendarEvent(reservation, locale, {
+    siteName: brand.siteName,
+    addressLine: brand.addressLine,
+    organizerEmail: profile.email_from,
+  });
   const calendarLinks = generateCalendarLinks(calendarEvent);
   
   // Render email HTML
@@ -52,6 +65,7 @@ export async function renderConfirmationEmail(
       locale={locale}
       reservation={reservation}
       calendarLinks={calendarLinks}
+      brand={brand}
     />
   );
 
@@ -64,7 +78,9 @@ export async function renderConfirmationEmail(
     contentType: 'text/calendar'
   };
 
-  const subject = dict.email.confirmation.subject.replace('{serviceName}', serviceName);
+  const subject = dict.email.confirmation.subject
+    .replace('{serviceName}', serviceName)
+    .replace(/Cotoka/g, brand.siteName ?? dict.email.common.siteName);
 
   return {
     subject,
@@ -79,9 +95,21 @@ export async function renderReminderEmail(
   locale: SupportedLocale = 'ja'
 ): Promise<EmailTemplate> {
   const dict = getDictionary(locale);
+  const profile = await getBusinessProfile();
+  const brand = {
+    siteName: profile.salon_name,
+    addressLine: locale === 'en' ? (profile.address_en ?? profile.address_ja) : (locale === 'zh' ? (profile.address_zh ?? profile.address_ja) : profile.address_ja),
+    phone: profile.phone,
+    websiteUrl: profile.website_url,
+    mapUrl: profile.map_url,
+  };
   
   // Generate calendar event and links
-  const calendarEvent = createReservationCalendarEvent(reservation, locale);
+  const calendarEvent = createReservationCalendarEvent(reservation, locale, {
+    siteName: brand.siteName,
+    addressLine: brand.addressLine,
+    organizerEmail: profile.email_from,
+  });
   const calendarLinks = generateCalendarLinks(calendarEvent);
   
   // Render email HTML
@@ -93,13 +121,17 @@ export async function renderReminderEmail(
       type={type}
       reservation={reservation}
       calendarLinks={calendarLinks}
+      brand={brand}
     />
   );
 
   const serviceName = reservation.service?.name || 'service';
-  const subject = type === '24h' 
-    ? dict.email.reminder.subject24h.replace('{serviceName}', serviceName)
-    : dict.email.reminder.subject2h.replace('{serviceName}', serviceName);
+  const baseSubject = type === '24h' 
+    ? dict.email.reminder.subject24h
+    : dict.email.reminder.subject2h;
+  const subject = baseSubject
+    .replace('{serviceName}', serviceName)
+    .replace(/Cotoka/g, brand.siteName ?? dict.email.common.siteName);
 
   return {
     subject,
@@ -112,6 +144,14 @@ export async function renderCancellationEmail(
   locale: SupportedLocale = 'ja'
 ): Promise<EmailTemplate> {
   const dict = getDictionary(locale);
+  const profile = await getBusinessProfile();
+  const brand = {
+    siteName: profile.salon_name,
+    addressLine: locale === 'en' ? (profile.address_en ?? profile.address_ja) : (locale === 'zh' ? (profile.address_zh ?? profile.address_ja) : profile.address_ja),
+    phone: profile.phone,
+    websiteUrl: profile.website_url,
+    mapUrl: profile.map_url,
+  };
   
   // Generate rebooking URL
   const rebookingUrl = `${process.env.NEXT_PUBLIC_BASE_URL || 'https://cotoka.jp'}/${locale}/booking`;
@@ -124,11 +164,14 @@ export async function renderCancellationEmail(
       locale={locale}
       reservation={reservation}
       rebookingUrl={rebookingUrl}
+      brand={brand}
     />
   );
 
   const serviceName = reservation.service?.name || 'service';
-  const subject = dict.email.cancellation.subject.replace('{serviceName}', serviceName);
+  const subject = dict.email.cancellation.subject
+    .replace('{serviceName}', serviceName)
+    .replace(/Cotoka/g, brand.siteName ?? dict.email.common.siteName);
 
   return {
     subject,
@@ -153,7 +196,7 @@ function generateICS(event: any): string {
   const uid = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}@cotoka.jp`;
   const now = new Date();
 
-  let icsContent = [
+  const icsContent = [
     'BEGIN:VCALENDAR',
     'VERSION:2.0',
     'PRODID:-//Cotoka//Booking System//EN',

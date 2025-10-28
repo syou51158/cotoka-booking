@@ -6,7 +6,7 @@ export async function resolveBaseUrl(req: Request, opts: Opts = {}) {
   const h = await headers();
   const xfHost = h.get("x-forwarded-host");
   const host = xfHost ?? h.get("host");
-  let proto = h.get("x-forwarded-proto") ?? "http";
+  const proto = h.get("x-forwarded-proto") ?? "http";
 
   const envUrl = process.env.SITE_URL && process.env.SITE_URL.startsWith("http")
     ? process.env.SITE_URL

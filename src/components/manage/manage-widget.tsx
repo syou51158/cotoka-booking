@@ -40,6 +40,7 @@ export default function ManageReservationWidget({ locale, dict }: Props) {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [stripeUrl, setStripeUrl] = useState<string | null>(null);
 
   async function handleLookup(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -147,10 +148,21 @@ export default function ManageReservationWidget({ locale, dict }: Props) {
         return;
       }
       const payload = await response.json();
-      if (payload?.data?.url) {
-        window.location.href = payload.data.url as string;
-      } else if (payload?.url) {
-        window.location.href = payload.url as string;
+      const url: string | undefined = (payload?.data?.url as string | undefined) ?? (payload?.url as string | undefined);
+      if (url) {
+        setStripeUrl(url);
+        try {
+          window.location.replace(url);
+        } catch {
+          try {
+            window.open(url, "_blank", "noopener");
+          } catch {}
+        }
+        setTimeout(() => {
+          if (document.visibilityState === "visible") {
+            setMessage("Stripeへの遷移に時間がかかっています。下のリンクから進んでください。");
+          }
+        }, 5000);
       } else {
         setError("決済URLの取得に失敗しました");
       }
@@ -212,6 +224,16 @@ export default function ManageReservationWidget({ locale, dict }: Props) {
       {message ? (
         <div className="rounded border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-600">
           {message}
+        </div>
+      ) : null}
+
+      {stripeUrl ? (
+        <div className="rounded border border-slate-200 bg-white p-3 text-sm text-slate-700">
+          <p>
+            Stripeへ遷移中です。進まない場合は
+            <a href={stripeUrl} target="_blank" rel="noopener" className="font-semibold underline">こちら</a>
+            をクリックしてください。
+          </p>
         </div>
       ) : null}
 

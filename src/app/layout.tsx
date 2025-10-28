@@ -2,7 +2,8 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
-import { SITE_NAME, DEFAULT_LOCALE, SITE_URL, SALON_NAME, SALON_ADDRESS, SALON_OPENING_HOURS, SALON_PRICE_RANGE, SALON_PHONE } from "@/lib/config";
+import { SITE_NAME, DEFAULT_LOCALE, SITE_URL, SALON_NAME, SALON_ADDRESS, SALON_OPENING_HOURS, SALON_PRICE_RANGE, SALON_PHONE, SALON_LOCATION_TEXT } from "@/lib/config";
+import { getBusinessProfile } from "@/server/settings";
 import { Button } from "@/components/ui/button";
 import LocaleSwitcher from "@/components/locale-switcher";
 import SentryInit from "@/components/sentry-init";
@@ -46,6 +47,14 @@ export default async function RootLayout({
   const resolvedParams = await params;
   const locale = resolvedParams?.locale ?? DEFAULT_LOCALE;
   const showLocaleSwitcher = Boolean(resolvedParams?.locale);
+  const profile = await getBusinessProfile();
+  const siteName = profile.salon_name ?? SITE_NAME;
+  const addressLine =
+    locale === "en"
+      ? (profile.address_en ?? profile.address_ja ?? "")
+      : locale === "zh"
+        ? (profile.address_zh ?? profile.address_ja ?? "")
+        : (profile.address_ja ?? profile.address_en ?? profile.address_zh ?? "");
   const structuredData = {
     "@context": "https://schema.org",
     "@graph": [
@@ -113,13 +122,11 @@ export default async function RootLayout({
           <header className="border-b bg-white/80 backdrop-blur">
             <div className="mx-auto flex w-full max-w-5xl items-center justify-between px-4 py-3">
               <Link href={`/${DEFAULT_LOCALE}/booking`} className="text-lg font-semibold tracking-tight">
-                {SITE_NAME}
+                {siteName}
               </Link>
               <div className="flex items-center gap-3">
                 <div className="text-right text-xs text-slate-500">
-                  京都市中京区・烏丸御池
-                  <br />
-                  エレベーター右後ろ・704
+                  {addressLine || SALON_LOCATION_TEXT}
                 </div>
                 <Button asChild className="inline-flex text-sm py-2 px-3">
                   <Link href={`/${DEFAULT_LOCALE}/booking`}>Web予約</Link>
@@ -131,8 +138,8 @@ export default async function RootLayout({
           <main className="mx-auto w-full max-w-5xl flex-1 px-4">{children}</main>
           <footer className="border-t bg-white/80 backdrop-blur">
             <div className="mx-auto flex w-full max-w-5xl items-center justify-between px-4 py-3 text-xs text-slate-500">
-              <Link href={`/${DEFAULT_LOCALE}/booking`}>{SITE_NAME}</Link>
-              <span>© {new Date().getFullYear()} Cotoka Relax & Beauty SPA</span>
+              <Link href={`/${DEFAULT_LOCALE}/booking`}>{siteName}</Link>
+              <span>© {new Date().getFullYear()} {siteName}</span>
             </div>
           </footer>
         </div>

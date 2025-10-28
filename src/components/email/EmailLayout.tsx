@@ -5,15 +5,28 @@ interface EmailLayoutProps {
   children: React.ReactNode;
   dict: Dictionary;
   previewText?: string;
+  brand?: {
+    siteName?: string;
+    addressLine?: string;
+    phone?: string;
+    websiteUrl?: string;
+    mapUrl?: string;
+  };
 }
 
-export function EmailLayout({ children, dict, previewText }: EmailLayoutProps) {
+export function EmailLayout({ children, dict, previewText, brand }: EmailLayoutProps) {
+  const siteName = brand?.siteName ?? dict.email.common.siteName;
+  const salonAddressLine = brand?.addressLine ?? dict.email.common.footer.address;
+  const salonPhoneLine = brand?.phone ?? dict.email.common.footer.phone;
+  const salonWebsiteUrl = brand?.websiteUrl ?? dict.email.common.footer.website;
+  const salonMapUrl = brand?.mapUrl ?? undefined;
+
   return (
     <html>
       <head>
         <meta charSet="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-        <title>{dict.email.common.siteName}</title>
+        <title>{siteName}</title>
         {previewText && (
           <div style={{ display: 'none', overflow: 'hidden', lineHeight: '1px', opacity: 0, maxHeight: 0, maxWidth: 0 }}>
             {previewText}
@@ -46,7 +59,7 @@ export function EmailLayout({ children, dict, previewText }: EmailLayoutProps) {
               fontSize: '24px',
               fontWeight: '600'
             }}>
-              {dict.email.common.siteName}
+              {siteName}
             </h1>
           </div>
 
@@ -64,22 +77,29 @@ export function EmailLayout({ children, dict, previewText }: EmailLayoutProps) {
             color: '#6b7280'
           }}>
             <div style={{ textAlign: 'center', marginBottom: '16px' }}>
-              <strong>{dict.email.common.siteName}</strong>
+              <strong>{siteName}</strong>
             </div>
             <div style={{ textAlign: 'center', marginBottom: '8px' }}>
-              {dict.email.common.footer.address}
+              {salonAddressLine}
             </div>
             <div style={{ textAlign: 'center', marginBottom: '8px' }}>
-              {dict.email.common.footer.phone}
+              {salonPhoneLine}
             </div>
+          <div style={{ textAlign: 'center', marginBottom: '16px' }}>
+            <a href={salonWebsiteUrl} style={{ color: '#2563eb', textDecoration: 'none' }}>
+              {salonWebsiteUrl}
+            </a>
+          </div>
+          {salonMapUrl ? (
             <div style={{ textAlign: 'center', marginBottom: '16px' }}>
-              <a href={dict.email.common.footer.website} style={{ color: '#2563eb', textDecoration: 'none' }}>
-                {dict.email.common.footer.website}
+              <a href={salonMapUrl} target="_blank" rel="noreferrer" style={{ color: '#2563eb', textDecoration: 'none' }}>
+                Google Map
               </a>
             </div>
-            <div style={{ textAlign: 'center', fontSize: '12px' }}>
-              {dict.email.common.footer.unsubscribe}
-            </div>
+          ) : null}
+          <div style={{ textAlign: 'center', fontSize: '12px' }}>
+            {dict.email.common.footer.unsubscribe}
+          </div>
           </div>
         </div>
       </body>

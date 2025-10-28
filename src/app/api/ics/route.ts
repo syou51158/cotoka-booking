@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { getReservationById } from "@/server/reservations";
 import { getServiceById } from "@/server/services";
 import { makeIcs } from "@/server/ics";
-import { SALON_LOCATION_TEXT, SITE_NAME, SITE_URL } from "@/lib/config";
+import { getBusinessProfile } from "@/server/settings";
 
 export async function GET(request: Request) {
   try {
@@ -24,20 +24,26 @@ export async function GET(request: Request) {
     const service = reservation.service_id
       ? await getServiceById(reservation.service_id)
       : null;
-    const title = `${SITE_NAME} - ${service?.name ?? "ご予約"}`;
+    const profile = await getBusinessProfile();
+    const siteName = profile.salon_name;
+    const addressLine = profile.address_ja ?? profile.address_en ?? profile.address_zh ?? "";
+    const websiteUrl = profile.website_url ?? undefined;
+    const title = `${siteName} - ${service?.name ?? "ご予約"}`;
     const descriptionLines = [
       `${reservation.customer_name} 様`,
-      "Cotoka Relax & Beauty SPA のご予約が確定しました。",
+      `${siteName} のご予約が確定しました。`,
       "烏丸御池駅直結、エレベーターを降りて右後ろの704号室までお越しください。",
-      SITE_URL,
+      websiteUrl ?? "",
     ];
 
     const ics = makeIcs({
       title,
       start: reservation.start_at,
       end: reservation.end_at,
-      location: SALON_LOCATION_TEXT,
+      location: addressLine,
       description: descriptionLines.join("\n"),
+      organizer: { name: siteName, email: profile.email_from },
+      url: websiteUrl,
     });
 
     return new NextResponse(ics, {

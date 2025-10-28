@@ -3,13 +3,8 @@ import { formatInTimeZone } from "date-fns-tz";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { getDictionary } from "@/i18n/dictionaries";
-import {
-  SALON_LOCATION_TEXT,
-  SITE_NAME,
-  SITE_URL,
-  TIMEZONE,
-  SALON_MAP_URL,
-} from "@/lib/config";
+import { TIMEZONE } from "@/lib/config";
+import { getBusinessProfile } from "@/server/settings";
 import { formatDisplay } from "@/lib/time";
 import { formatCurrency } from "@/lib/format";
 import { getReservationById } from "@/server/reservations";
@@ -36,17 +31,28 @@ export default async function SuccessPage({ params, searchParams }: Props) {
       ? await getServiceById(reservation.service_id)
       : null;
 
+  const profile = await getBusinessProfile();
+  const siteName = profile.salon_name;
+  const websiteUrl = profile.website_url ?? undefined;
+  const mapUrl = profile.map_url ?? undefined;
+  const addressLine =
+    resolved.locale === "en"
+      ? (profile.address_en ?? profile.address_ja ?? "")
+      : resolved.locale === "zh"
+        ? (profile.address_zh ?? profile.address_ja ?? "")
+        : (profile.address_ja ?? profile.address_en ?? profile.address_zh ?? "");
+
   const icsDownloadHref = reservation
     ? `/api/ics?rid=${encodeURIComponent(reservation.id)}`
     : null;
   const googleCalendarHref = reservation
     ? (() => {
-        const title = `${SITE_NAME} - ${service?.name ?? "ご予約"}`;
+        const title = `${siteName} - ${service?.name ?? "ご予約"}`;
         const details = [
           `${reservation.customer_name} 様`,
-          "Cotoka Relax & Beauty SPA のご予約が確定しました。",
-          SALON_LOCATION_TEXT,
-          SITE_URL,
+          `${siteName} のご予約が確定しました。`,
+          addressLine,
+          websiteUrl ?? "",
         ].join("\n");
         const startUtc = new Date(reservation.start_at ?? new Date());
         const endUtc = new Date(reservation.end_at ?? new Date());
@@ -67,18 +73,24 @@ export default async function SuccessPage({ params, searchParams }: Props) {
         googleUrl.searchParams.set("text", title);
         googleUrl.searchParams.set("dates", `${startGoogle}/${endGoogle}`);
         googleUrl.searchParams.set("details", details);
-        googleUrl.searchParams.set("location", SALON_LOCATION_TEXT);
+        googleUrl.searchParams.set("location", addressLine);
         return googleUrl.toString();
       })()
     : null;
 
   const showPaymentHelp =
-    reservation && !csId && ["unpaid", "confirmed", "pending"].includes(reservation.status as any);
+    reservation && !csId && ["unpaid", "confirmed", "pending", "processing"].includes(reservation.status as any);
   const showOnsitePaymentNotice =
     !!reservation &&
     !csId &&
     (((reservation as any).payment_option ?? "pay_in_store") === "pay_in_store") &&
-    (["confirmed", "unpaid", "pending"].includes(reservation.status as any));
+    (["confirmed", "unpaid", "pending", "processing"].includes(reservation.status as any));
+
+  // 決済確認ウィジェットの表示は、Stripe セッションIDが存在し、なおかつ予約が未支払い/未確定系のときのみ
+  const canShowPaymentConfirm =
+    !!reservation &&
+    !!csId &&
+    (["unpaid", "confirmed", "pending", "processing"].includes(reservation.status as any));
 
   return (
     <div className="mx-auto flex min-h-[60vh] w-full max-w-2xl items-center px-4 py-16">
@@ -93,8 +105,8 @@ export default async function SuccessPage({ params, searchParams }: Props) {
           <p>
             ご予約内容は登録いただいたメールアドレスへ送信されます。届かない場合は迷惑メールをご確認のうえ、お電話でお問い合わせください。
           </p>
-          {reservation && csId ? (
-            <PaymentConfirm rid={reservation.id} csId={csId} />
+          {canShowPaymentConfirm ? (
+            <PaymentConfirm rid={reservation!.id} csId={csId!} />
           ) : null}
 
           {reservation ? (
@@ -149,16 +161,16 @@ export default async function SuccessPage({ params, searchParams }: Props) {
             <p className="text-xs uppercase tracking-wide text-slate-500">
               ご来店案内
             </p>
-            <p>{SALON_LOCATION_TEXT}</p>
+            <p>{addressLine}</p>
             <p>
               烏丸御池駅の改札を出てエレベーターで7階へ。エレベーターを降りて右後ろ側の704号室です。
             </p>
             <div className="mt-3 flex flex-col gap-2 sm:flex-row">
               <Button asChild className="w-full sm:w-auto">
-                <a href={SALON_MAP_URL} target="_blank" rel="noreferrer">Googleマップで見る</a>
+                <a href={mapUrl} target="_blank" rel="noreferrer">Googleマップで見る</a>
               </Button>
               <Button asChild variant="outline" className="w-full sm:w-auto">
-                <a href={SALON_MAP_URL} target="_blank" rel="noreferrer">経路案内を開く</a>
+                <a href={mapUrl} target="_blank" rel="noreferrer">経路案内を開く</a>
               </Button>
             </div>
           </div>
