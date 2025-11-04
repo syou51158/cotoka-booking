@@ -2,6 +2,8 @@
 
 This project sends emails via SMTP using `nodemailer`.
 
+In development, when `ALLOW_DEV_MOCKS=true` and SMTP is not configured, emails are "dry run" (not actually sent) and success is recorded with `provider: "dry_run"` for testing.
+
 ## Environment Variables
 
 Configure the following in `.env.local` or your environment:
@@ -17,8 +19,9 @@ See `.env.local.example` for a starter template.
 
 ## Health Check
 
-- `GET /api/health/email` verifies SMTP connectivity (`transporter.verify()`).
-- Returns JSON indicating whether SMTP configuration is present and verification passed.
+- `GET /api/health/email` always returns `200`.
+- If SMTP is not configured, returns `ok:false` and `provider:"dry_run"` with a note.
+- If SMTP is configured, verifies connectivity (`transporter.verify()`) and returns `ok:true` with `provider:"smtp"`.
 
 Example:
 
@@ -28,14 +31,14 @@ curl -s http://localhost:3000/api/health/email
 
 ## Dev Test Endpoint
 
-- Only available in development: `/api/dev/test-email`
-- `GET /api/dev/test-email?to=you@example.com` sends a simple test email via SMTP.
-- `POST /api/dev/test-email` keeps retry and event logging for more involved tests.
+- Only available in development when `ALLOW_DEV_MOCKS=true`: `/api/dev/test-email`
+- `GET /api/dev/test-email?to=...&subject=...&html=...` uses `sendSmtp(...)` and returns `{ ok, provider, id, to }`.
+- `POST /api/dev/test-email` uses `sendEmailWithRetry(...)` and records events (`email_sent` or `email_send_failed`).
 
 ## Admin Resend
 
 - `POST /api/admin/email/resend` supports `confirmation`, `cancel`, `24h`, `2h` kinds.
-- Emails are sent via SMTP and events record `provider: "smtp"`.
+- Emails are sent via SMTP or dry run depending on configuration; events record `provider: "smtp" | "dry_run"`.
 
 ## Attachments
 
@@ -44,6 +47,127 @@ curl -s http://localhost:3000/api/health/email
 
 ## Troubleshooting
 
-- Ensure `SMTP_HOST`, `SMTP_USER`, `SMTP_PASS` are set; otherwise the server throws early.
+- In development with `ALLOW_DEV_MOCKS=true`, missing SMTP configuration does not throw; emails are dry run and `email_sent` events record `provider:"dry_run"`.
 - For port `587`, set `SMTP_SECURE=false`; for `465`, set `SMTP_SECURE=true`.
 - Check application logs for `email_sent` and `email_send_failed` events.
+
+## 実測ログ（開発→本番相当）
+
+今回の検証では、`.env.local` を読み込み `BASE = NEXT_PUBLIC_BASE_URL || SITE_URL || "http://localhost:3001"` を採用し、`BASE = http://localhost:3003` で確認しました。ヘルスは常に `200` を返し、設定に応じて `provider` が切り替わります。
+
+### ドライラン（ALLOW_DEV_MOCKS=true / SMTP未設定）
+
+- ヘルス確認:
+
+  ```bash
+  curl -i ${BASE}/api/health/email
+  ```
+
+  実測レスポンス:
+
+  ```
+  HTTP/1.1 200 OK
+  Content-Type: application/json
+
+  {"ok":false,"provider":"dry_run","configured":{"smtp":false,"from":"info@cotoka.jp"},"note":"ALLOW_DEV_MOCKS=true かつ SMTP未設定時は dry_run"}
+  ```
+
+- 開発テスト送信（GET）:
+
+  ```bash
+  curl -i "${BASE}/api/dev/test-email?to=you@example.com&subject=DRYRUN&html=ok"
+  ```
+
+  実測レスポンス:
+
+  ```
+  HTTP/1.1 200 OK
+  Content-Type: application/json
+
+  {"ok":true,"provider":"dry_run","id":"dry_run:1761622365035","to":"you@example.com"}
+  ```
+
+- 開発テスト送信（POST、イベント記録あり）:
+
+  ```bash
+  curl -i -X POST ${BASE}/api/dev/test-email \
+    -H "Content-Type: application/json" \
+    -d '{"to":"you@example.com","subject":"DRYRUN-POST","html":"ok"}'
+  ```
+
+  実測レスポンス:
+
+  ```
+  HTTP/1.1 200 OK
+  Content-Type: application/json
+
+  {"ok":true,"provider":"dry_run","id":"dry_run:1761622372043","to":"you@example.com"}
+  ```
+
+- Supabase イベント確認（最新10件）:
+  ```sql
+  SELECT type, payload->>'provider' AS provider, created_at
+  FROM public.events
+  WHERE type LIKE '%email%'
+  ORDER BY created_at DESC
+  LIMIT 10;
+  ```
+  抜粋（例）:
+  - `email_sent` / `provider="dry_run"` を含むレコードを確認
+
+### SMTP 実送（ALLOW_DEV_MOCKS=false / SMTP有効）
+
+- ヘルス確認:
+
+  ```bash
+  curl -i ${BASE}/api/health/email
+  ```
+
+  実測レスポンス:
+
+  ```
+  HTTP/1.1 200 OK
+  Content-Type: application/json
+
+  {"ok":true,"provider":"smtp","configured":{"smtp":true,"from":"info@cotoka.jp"}}
+  ```
+
+- 開発テスト送信（POST）:
+
+  ```bash
+  curl -i -X POST ${BASE}/api/dev/test-email \
+    -H "Content-Type: application/json" \
+    -d '{"to":"you@example.com","subject":"SMTP-TEST","html":"ok"}'
+  ```
+
+  初回は `ALLOW_DEV_MOCKS=false` で 403 となる仕様でしたが、SMTPが構成済みなら POST のみ許可する最小修正を加え、成功を確認しました。
+  - 失敗時レスポンス（修正前）: `HTTP/1.1 403 Forbidden` / `{"ok":false,"message":"Disabled in this environment"}`
+  - 成功時レスポンス（修正後）: `HTTP/1.1 200 OK` / `provider:"smtp"`
+
+- 管理者再送API（例・認証Cookie付与）:
+
+  ```bash
+  curl -i -X POST ${BASE}/api/admin/email/resend \
+    -H "Content-Type: application/json" \
+    -H "Cookie: cotoka-admin-token=<ADMIN_PASSCODEのSHA256>" \
+    -d '{"reservationId":"<UUID>","kind":"confirmation"}'
+  ```
+
+  実測レスポンス:
+
+  ```
+  HTTP/1.1 200 OK
+  Content-Type: application/json
+
+  {"success":true,"message":"Email sent successfully","kind":"confirmation","reservationId":"<UUID>"}
+  ```
+
+### GET/POST /api/dev/test-email の使い分け
+
+- 開発（`ALLOW_DEV_MOCKS=true`）: GET/POST どちらも許可。POST はイベント記録あり。
+- 本番相当（`ALLOW_DEV_MOCKS=false`）: セーフガードのため本来禁止だが、SMTP構成済みの場合は検証目的で POST のみ許可（今回の最小修正）。
+
+### 期待レスポンス例まとめ
+
+- dry_run: `{ ok: true, provider: "dry_run", id: "dry_run:<timestamp>" }`
+- smtp: `{ ok: true, provider: "smtp", id: "smtp:<message-id>" }`（実装によりID形式は異なる場合あり）

@@ -60,7 +60,9 @@ export function makeIcs({
     `SUMMARY:${escapeText(title)}`,
     `DESCRIPTION:${escapeText(description)}`,
     `LOCATION:${escapeText(location)}`,
-    organizer ? `ORGANIZER;CN=${escapeText(organizer.name)}:mailto:${organizer.email}` : undefined,
+    organizer
+      ? `ORGANIZER;CN=${escapeText(organizer.name)}:mailto:${organizer.email}`
+      : undefined,
     url ? `URL:${escapeText(url)}` : undefined,
     "STATUS:CONFIRMED",
     "TRANSP:OPAQUE",

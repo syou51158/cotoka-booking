@@ -128,9 +128,8 @@ export async function settleReservationAction(formData: FormData) {
   if (!method || typeof method !== "string") {
     throw new Error("method is required");
   }
-  const amount = amountRaw && typeof amountRaw === "string"
-    ? Number(amountRaw)
-    : undefined;
+  const amount =
+    amountRaw && typeof amountRaw === "string" ? Number(amountRaw) : undefined;
   await settleReservationPayment(id, method as any, amount);
   revalidatePath("/admin");
 }
@@ -151,10 +150,12 @@ export async function updateServiceSlotIntervalAction(formData: FormData) {
   if (!serviceId || typeof serviceId !== "string") {
     throw new Error("service_id is required");
   }
-  const minutes = typeof minRaw === "string" && minRaw.length > 0
-    ? Number(minRaw)
-    : null;
-  if (typeof minutes === "number" && (!Number.isFinite(minutes) || minutes <= 0)) {
+  const minutes =
+    typeof minRaw === "string" && minRaw.length > 0 ? Number(minRaw) : null;
+  if (
+    typeof minutes === "number" &&
+    (!Number.isFinite(minutes) || minutes <= 0)
+  ) {
     throw new Error("slot_interval_min must be a positive number");
   }
   await updateServiceSlotInterval(serviceId, minutes);
@@ -167,10 +168,12 @@ export async function updateStaffSlotIntervalAction(formData: FormData) {
   if (!staffId || typeof staffId !== "string") {
     throw new Error("staff_id is required");
   }
-  const minutes = typeof minRaw === "string" && minRaw.length > 0
-    ? Number(minRaw)
-    : null;
-  if (typeof minutes === "number" && (!Number.isFinite(minutes) || minutes <= 0)) {
+  const minutes =
+    typeof minRaw === "string" && minRaw.length > 0 ? Number(minRaw) : null;
+  if (
+    typeof minutes === "number" &&
+    (!Number.isFinite(minutes) || minutes <= 0)
+  ) {
     throw new Error("slot_interval_min must be a positive number");
   }
   await updateStaffSlotInterval(staffId, minutes);

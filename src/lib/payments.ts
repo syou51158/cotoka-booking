@@ -7,7 +7,7 @@ export type PaymentState = {
   paid: number;
   remaining: number;
   isPaid: boolean;
-  statusTag: 'unpaid' | 'partial' | 'paid' | 'canceled';
+  statusTag: "unpaid" | "partial" | "paid" | "canceled";
   shouldShowPaymentUI: boolean;
 };
 
@@ -28,33 +28,33 @@ export function computePaymentState(r: ReservationRow): PaymentState {
   const total = toNumberSafe(r.amount_total_jpy);
   const paid = toNumberSafe(r.paid_amount_jpy);
   const remaining = Math.max(0, total - paid);
-  
+
   // キャンセル済みの場合は支払いUI非表示
-  if (r.status === 'canceled') {
+  if (r.status === "canceled") {
     return {
       total,
       paid,
       remaining,
       isPaid: false,
-      statusTag: 'canceled',
+      statusTag: "canceled",
       shouldShowPaymentUI: false,
     };
   }
-  
-  let statusTag: 'unpaid' | 'partial' | 'paid';
+
+  let statusTag: "unpaid" | "partial" | "paid";
   let isPaid: boolean;
-  
+
   if (remaining <= 0 && total > 0) {
-    statusTag = 'paid';
+    statusTag = "paid";
     isPaid = true;
   } else if (paid > 0 && remaining > 0) {
-    statusTag = 'partial';
+    statusTag = "partial";
     isPaid = false;
   } else {
-    statusTag = 'unpaid';
+    statusTag = "unpaid";
     isPaid = false;
   }
-  
+
   return {
     total,
     paid,

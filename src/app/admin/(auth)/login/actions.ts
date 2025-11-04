@@ -15,11 +15,11 @@ export async function login(formData: FormData) {
     return { error: "パスコードが正しくありません" } as const;
   }
 
-  createAdminSession();
+  await createAdminSession();
   redirect("/admin");
 }
 
 export async function logout() {
-  clearAdminSession();
+  await clearAdminSession();
   redirect("/admin/login");
 }

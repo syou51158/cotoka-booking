@@ -14,9 +14,12 @@ export async function GET(request: Request) {
         description: service.description ?? null,
         duration_min: service.duration_min,
         price_jpy: service.price_jpy,
-        active: service.active ?? (service as { is_active?: boolean })?.is_active ?? false,
+        active:
+          service.active ??
+          (service as { is_active?: boolean })?.is_active ??
+          false,
       })),
-      200
+      200,
     );
     return withDataSource(res, "db");
   } catch (error) {

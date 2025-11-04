@@ -1,6 +1,12 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+} from "@/components/ui/card";
 import { getActiveServices } from "@/server/services";
 import { formatCurrency, formatDuration } from "@/lib/format";
 import {
@@ -50,7 +56,9 @@ export default async function TopPage({ params }: Props) {
       {/* Hero */}
       <section className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div className="space-y-2">
-          <h1 className="text-3xl font-semibold text-slate-900">{SALON_NAME}</h1>
+          <h1 className="text-3xl font-semibold text-slate-900">
+            {SALON_NAME}
+          </h1>
           <p className="text-sm text-slate-600">
             烏丸御池駅直結・704号室。エレベーターを降りて右後ろへお進みください。
           </p>
@@ -59,7 +67,11 @@ export default async function TopPage({ params }: Props) {
           <Button asChild className="w-full sm:w-auto text-base py-6">
             <Link href={`/${locale}/booking`}>Web予約する</Link>
           </Button>
-          <Button asChild variant="outline" className="w-full sm:w-auto text-base py-6">
+          <Button
+            asChild
+            variant="outline"
+            className="w-full sm:w-auto text-base py-6"
+          >
             <a href={SALON_MAP_URL} target="_blank" rel="noopener">
               地図で確認
             </a>
@@ -69,7 +81,9 @@ export default async function TopPage({ params }: Props) {
 
       {/* メニュー&価格 */}
       <section className="space-y-4">
-        <h2 className="text-2xl font-semibold text-slate-900">メニュー & 価格</h2>
+        <h2 className="text-2xl font-semibold text-slate-900">
+          メニュー & 価格
+        </h2>
         <div className="grid gap-4 sm:grid-cols-2">
           {services.map((service) => (
             <Card key={service.id}>
@@ -93,7 +107,9 @@ export default async function TopPage({ params }: Props) {
                   </span>
                 </div>
                 <Button asChild className="mt-2 w-full">
-                  <Link href={`/${locale}/booking/${service.id}`}>このメニューで予約</Link>
+                  <Link href={`/${locale}/booking/${service.id}`}>
+                    このメニューで予約
+                  </Link>
                 </Button>
               </CardContent>
             </Card>
@@ -110,7 +126,9 @@ export default async function TopPage({ params }: Props) {
               {SALON_OPENING_HOURS.map((h) => (
                 <div key={h.day} className="flex items-center justify-between">
                   <span className="text-slate-500">{h.day}</span>
-                  <span className="text-slate-900">{h.opens} – {h.closes}</span>
+                  <span className="text-slate-900">
+                    {h.opens} – {h.closes}
+                  </span>
                 </div>
               ))}
             </div>
@@ -119,12 +137,13 @@ export default async function TopPage({ params }: Props) {
       </section>
 
       {/* アクセス */}
-      <section className="space-y-3">
+      <section id="access" className="space-y-3">
         <h2 className="text-2xl font-semibold text-slate-900">アクセス</h2>
         <Card>
           <CardContent className="py-5 space-y-2 text-sm text-slate-700">
             <p>
-              住所：{SALON_ADDRESS.streetAddress}（{SALON_ADDRESS.addressLocality}、{SALON_ADDRESS.addressRegion}）
+              住所：{SALON_ADDRESS.streetAddress}（
+              {SALON_ADDRESS.addressLocality}、{SALON_ADDRESS.addressRegion}）
             </p>
             <p>最寄り：烏丸御池駅 直結</p>
             <p>メモ：エレベーターを降りて右後ろ／704号室</p>
@@ -140,8 +159,10 @@ export default async function TopPage({ params }: Props) {
       </section>
 
       {/* キャンセルポリシー */}
-      <section className="space-y-3">
-        <h2 className="text-2xl font-semibold text-slate-900">キャンセルポリシー</h2>
+      <section id="cancel-policy" className="space-y-3">
+        <h2 className="text-2xl font-semibold text-slate-900">
+          キャンセルポリシー
+        </h2>
         <Card>
           <CardContent className="py-5 text-sm text-slate-700">
             {CANCEL_POLICY_TEXT}

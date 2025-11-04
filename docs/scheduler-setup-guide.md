@@ -229,11 +229,11 @@ const ALLOWED_IPS = [
 
 export async function POST(request: NextRequest) {
   const clientIP = request.ip || request.headers.get('x-forwarded-for');
-  
+
   if (!ALLOWED_IPS.includes(clientIP)) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
-  
+
   // 既存の処理...
 }
 ```
@@ -362,6 +362,7 @@ gcloud logging read "resource.type=cloud_scheduler_job" \
 **症状**: スケジュールされた時間にジョブが実行されない
 
 **確認方法**:
+
 ```bash
 # ジョブの状態確認
 gcloud scheduler jobs describe reminder-job
@@ -371,6 +372,7 @@ gcloud logging read "resource.type=cloud_scheduler_job AND resource.labels.job_i
 ```
 
 **解決方法**:
+
 1. ジョブが有効化されているか確認
 2. スケジュール設定の確認
 3. タイムゾーン設定の確認
@@ -380,12 +382,14 @@ gcloud logging read "resource.type=cloud_scheduler_job AND resource.labels.job_i
 **症状**: 認証エラーでジョブが失敗する
 
 **確認方法**:
+
 ```bash
 # エラーログの確認
 gcloud logging read "resource.type=cloud_scheduler_job AND severity=ERROR" --limit=10
 ```
 
 **解決方法**:
+
 1. CRON_SECRETの確認
 2. Authorizationヘッダーの設定確認
 3. アプリケーション側の認証ロジック確認
@@ -395,6 +399,7 @@ gcloud logging read "resource.type=cloud_scheduler_job AND severity=ERROR" --lim
 **症状**: アプリケーション内部エラー
 
 **確認方法**:
+
 ```bash
 # Vercelログの確認
 vercel logs --follow
@@ -406,6 +411,7 @@ curl -X POST "https://your-app.vercel.app/api/cron/reminders" \
 ```
 
 **解決方法**:
+
 1. アプリケーションログの詳細確認
 2. データベース接続の確認
 3. 環境変数の設定確認
@@ -449,7 +455,7 @@ gcloud logging read "resource.type=cloud_scheduler_job" \
 export async function POST(request: NextRequest) {
   const authHeader = request.headers.get('authorization');
   const expectedAuth = `Bearer ${process.env.CRON_SECRET}`;
-  
+
   // タイミング攻撃を防ぐための定数時間比較
   if (!authHeader || !timingSafeEqual(
     Buffer.from(authHeader),
@@ -457,13 +463,13 @@ export async function POST(request: NextRequest) {
   )) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
-  
+
   // 追加のセキュリティチェック
   const userAgent = request.headers.get('user-agent');
   if (!userAgent?.includes('Google-Cloud-Scheduler')) {
     return NextResponse.json({ error: 'Invalid user agent' }, { status: 403 });
   }
-  
+
   // 既存の処理...
 }
 ```
@@ -475,8 +481,8 @@ export async function POST(request: NextRequest) {
 const schedulerRateLimit = rateLimit({
   windowMs: 60 * 1000, // 1分
   max: 20, // 最大20回/分
-  keyGenerator: () => 'cloud-scheduler',
-  message: 'Too many scheduler requests'
+  keyGenerator: () => "cloud-scheduler",
+  message: "Too many scheduler requests",
 });
 ```
 
@@ -488,16 +494,20 @@ function logSchedulerEvent(event, data) {
   const sanitizedData = {
     ...data,
     // 機密情報を除外
-    authorization: '[REDACTED]',
-    email: data.email ? data.email.replace(/(.{2}).*(@.*)/, '$1***$2') : undefined
+    authorization: "[REDACTED]",
+    email: data.email
+      ? data.email.replace(/(.{2}).*(@.*)/, "$1***$2")
+      : undefined,
   };
-  
-  console.log(JSON.stringify({
-    timestamp: new Date().toISOString(),
-    source: 'cloud-scheduler',
-    event,
-    data: sanitizedData
-  }));
+
+  console.log(
+    JSON.stringify({
+      timestamp: new Date().toISOString(),
+      source: "cloud-scheduler",
+      event,
+      data: sanitizedData,
+    }),
+  );
 }
 ```
 
@@ -512,6 +522,7 @@ function logSchedulerEvent(event, data) {
 ### 10.2 コスト削減のベストプラクティス
 
 1. **適切な実行間隔の設定**
+
    ```bash
    # 過度に頻繁な実行を避ける
    # 5分間隔で十分な場合は1分間隔にしない
@@ -520,10 +531,11 @@ function logSchedulerEvent(event, data) {
    ```
 
 2. **不要なジョブの削除**
+
    ```bash
    # 使用していないジョブの確認
    gcloud scheduler jobs list
-   
+
    # 不要なジョブの削除
    gcloud scheduler jobs delete unused-job
    ```
@@ -563,18 +575,18 @@ gcloud scheduler jobs create http reminder-secondary \
 // アプリケーション側でのフェイルオーバー処理
 export async function POST(request: NextRequest) {
   const region = request.headers.get('x-region') || 'primary';
-  
+
   // プライマリリージョンからの実行のみ処理
   if (region === 'secondary') {
     // プライマリの健全性をチェック
     const primaryHealthy = await checkPrimaryHealth();
     if (primaryHealthy) {
-      return NextResponse.json({ 
-        message: 'Primary is healthy, skipping secondary execution' 
+      return NextResponse.json({
+        message: 'Primary is healthy, skipping secondary execution'
       });
     }
   }
-  
+
   // 通常の処理を実行
   return await processReminders();
 }

@@ -103,7 +103,9 @@ export async function cancelReservation(
     .from("reservations")
     .update(updates as any)
     .eq("id", reservationId)
-    .select("id, code, customer_email, customer_phone, service:service_id(name)")
+    .select(
+      "id, code, customer_email, customer_phone, service:service_id(name)",
+    )
     .maybeSingle();
 
   if (error) {
@@ -166,9 +168,7 @@ export async function upsertDateOverride(
     is_open: payload.is_open ?? false,
     note: payload.note ?? null,
   };
-  const { error } = await supabase
-    .from("date_overrides")
-    .upsert(values as any);
+  const { error } = await supabase.from("date_overrides").upsert(values as any);
   if (error) throw error;
 }
 
@@ -206,9 +206,7 @@ export async function upsertShift(
     end_at: payload.end_at,
     note: payload.note ?? null,
   };
-  const { error } = await supabase
-    .from("shifts")
-    .upsert(values as any);
+  const { error } = await supabase.from("shifts").upsert(values as any);
   if (error) throw error;
 }
 
@@ -262,7 +260,9 @@ export async function settleReservationPayment(
 
   // 金額バリデーション: 0 < amount <= remaining
   if (!(finalAmount > 0) || finalAmount > remaining) {
-    const err = new Error("不正な金額です（0より大きく、残額以内で指定してください）");
+    const err = new Error(
+      "不正な金額です（0より大きく、残額以内で指定してください）",
+    );
     (err as any).statusCode = 400;
     throw err;
   }
@@ -313,10 +313,10 @@ export async function settleReservationPayment(
 // 支払い履歴（reservation_settled / reservation_paid）を取得
 export async function getReservationPaymentHistory(reservationId: string) {
   const supabase = client();
-  const { data, error } = await supabase
+  const { data, error } = (await supabase
     .from("events")
     .select("type, payload, created_at")
-    .in("type", ["reservation_settled", "reservation_paid"]) as any;
+    .in("type", ["reservation_settled", "reservation_paid"])) as any;
 
   if (error) throw error;
 
@@ -329,12 +329,15 @@ export async function getReservationPaymentHistory(reservationId: string) {
   const items = filtered.map((row: any) => {
     const p = row.payload as any;
     const isSettled = row.type === "reservation_settled";
-    const collectedAt = (p?.payment_collected_at as string | undefined) ?? row.created_at;
+    const collectedAt =
+      (p?.payment_collected_at as string | undefined) ?? row.created_at;
     const amount =
       (p?.applied_amount_jpy as number | undefined) ??
       (p?.paid_amount_jpy as number | undefined) ??
       null;
-    const method = (p?.payment_method as string | undefined) ?? (isSettled ? "other" : "card");
+    const method =
+      (p?.payment_method as string | undefined) ??
+      (isSettled ? "other" : "card");
     const source = isSettled ? "管理画面" : "Stripe";
     return {
       type: row.type as string,
@@ -353,7 +356,10 @@ export async function getReservationPaymentHistory(reservationId: string) {
     amount_jpy: number | null;
     method: string;
     source: string;
-    details: { stripe_checkout_session: string | null; stripe_payment_intent: string | null };
+    details: {
+      stripe_checkout_session: string | null;
+      stripe_payment_intent: string | null;
+    };
   }>;
 
   // 時間順に並べ替え
@@ -393,17 +399,18 @@ export async function updateSiteSettings(defaultSlotIntervalMin: number) {
       .eq("id", existing.id);
     if (error) throw error;
   } else {
-    const { error } = await (supabase as any)
-      .from("site_settings")
-      .insert({
-        default_slot_interval_min: defaultSlotIntervalMin,
-        updated_at: new Date().toISOString(),
-      });
+    const { error } = await (supabase as any).from("site_settings").insert({
+      default_slot_interval_min: defaultSlotIntervalMin,
+      updated_at: new Date().toISOString(),
+    });
     if (error) throw error;
   }
 }
 
-export async function updateServiceSlotInterval(serviceId: string, minutes: number | null) {
+export async function updateServiceSlotInterval(
+  serviceId: string,
+  minutes: number | null,
+) {
   const supabase = client();
   const { error } = await supabase
     .from("services")
@@ -412,7 +419,10 @@ export async function updateServiceSlotInterval(serviceId: string, minutes: numb
   if (error) throw error;
 }
 
-export async function updateStaffSlotInterval(staffId: string, minutes: number | null) {
+export async function updateStaffSlotInterval(
+  staffId: string,
+  minutes: number | null,
+) {
   const supabase = client();
   const { error } = await supabase
     .from("staff")

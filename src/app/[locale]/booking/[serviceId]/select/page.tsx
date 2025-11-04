@@ -51,7 +51,9 @@ export default async function SelectPage({ params }: Props) {
   return (
     <div className="mx-auto w-full max-w-4xl space-y-6 px-4 py-14 pb-24 lg:pb-0">
       <Button asChild variant="link" className="px-0">
-        <Link href={`/${locale}/booking/${service.id}`}>← {dict.common.back}</Link>
+        <Link href={`/${locale}/booking/${service.id}`}>
+          ← {dict.common.back}
+        </Link>
       </Button>
 
       <div className="space-y-2">
@@ -59,7 +61,9 @@ export default async function SelectPage({ params }: Props) {
           {dict.booking.steps.date}
         </h1>
         <p className="text-sm text-slate-600">
-          {service.name} ・ {dict.services.duration}: {formatDuration(service.duration_min)} ・ {dict.services.price}: {formatCurrency(service.price_jpy)}
+          {service.name} ・ {dict.services.duration}:{" "}
+          {formatDuration(service.duration_min)} ・ {dict.services.price}:{" "}
+          {formatCurrency(service.price_jpy)}
         </p>
       </div>
 
@@ -80,7 +84,6 @@ export default async function SelectPage({ params }: Props) {
           color: staff.color ?? "#64748B",
         }))}
       />
-
     </div>
   );
 }

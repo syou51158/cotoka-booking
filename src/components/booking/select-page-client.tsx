@@ -26,15 +26,22 @@ interface Props {
   staff: { id: string; name: string; color: string }[];
 }
 
-export default function SelectPageClient({ locale, dict, service, staff }: Props) {
+export default function SelectPageClient({
+  locale,
+  dict,
+  service,
+  staff,
+}: Props) {
   const [selectedSlot, setSelectedSlot] = useState<AvailableSlot | null>(null);
-  const [extraRows, setExtraRows] = useState<{ label: string; value: string }[] | undefined>();
+  const [extraRows, setExtraRows] = useState<
+    { label: string; value: string }[] | undefined
+  >();
   const [ctaHref, setCtaHref] = useState<string | undefined>();
 
   const handleSlotChange = (
     slot: AvailableSlot | null,
     rows?: { label: string; value: string }[],
-    href?: string
+    href?: string,
   ) => {
     setSelectedSlot(slot);
     setExtraRows(rows);
@@ -63,7 +70,9 @@ export default function SelectPageClient({ locale, dict, service, staff }: Props
             disabled={!selectedSlot}
             extraRows={extraRows}
             durationNote={{
-              treatmentMin: service.duration_min - (service.buffer_before_min + service.buffer_after_min),
+              treatmentMin:
+                service.duration_min -
+                (service.buffer_before_min + service.buffer_after_min),
               bufferBeforeMin: service.buffer_before_min,
               bufferAfterMin: service.buffer_after_min,
             }}

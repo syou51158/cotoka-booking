@@ -79,6 +79,8 @@ const dictionaries = {
       paymentTitle: "支払い方法",
       paymentPayInStore: "来店時に支払う",
       paymentPrepay: "事前にオンライン決済（クレジットカード）",
+      paymentTtlNotice:
+        "選択後15分以内にお支払いが完了しない場合、予約は自動キャンセルされます。",
       submit: "Stripeでお支払いへ進む",
       submitNoPrepayment: "予約を確定する",
       summary: "予約内容",
@@ -122,10 +124,17 @@ const dictionaries = {
         },
       },
       confirmation: {
-        subject: "【Cotoka】ご予約確認 - {serviceName}",
+        subject: "【Cotoka】ご予約確認（予約コード: {code}） - {serviceName}",
         title: "ご予約ありがとうございます",
         greeting: "{customerName} 様",
         message: "以下の内容でご予約を承りました。",
+        cta: {
+          view: "オンラインで予約詳細を見る",
+          manage: "予約を照会・変更する",
+          manageHelp:
+            "予約コードとメールまたは電話番号で照会できます。リンクの有効期限が切れてもこちらから確認可能です。",
+        },
+        codeLabel: "予約コード",
         details: {
           service: "サービス",
           staff: "担当セラピスト",
@@ -150,10 +159,17 @@ const dictionaries = {
           items: [
             "ご予約時間の5分前にお越しください",
             "お着替えをご用意しております",
-            "ご不明な点がございましたらお気軽にお問い合わせください"
+            "ご不明な点がございましたらお気軽にお問い合わせください",
           ],
         },
         contact: "お問い合わせ",
+        ttlNote:
+          "オンライン確認リンクは {days} 日間有効です。期限切れの場合も、予約コードと連絡先で照会できます。",
+        registeredContact: {
+          title: "登録済み連絡先",
+          email: "メール",
+          phone: "電話",
+        },
       },
       reminder: {
         subject24h: "【Cotoka】明日のご予約について - {serviceName}",
@@ -168,7 +184,7 @@ const dictionaries = {
           items: [
             "動きやすい服装でお越しください",
             "貴重品はお預かりいたします",
-            "ご質問がございましたら事前にお知らせください"
+            "ご質問がございましたら事前にお知らせください",
           ],
         },
       },
@@ -179,7 +195,8 @@ const dictionaries = {
         message: "以下のご予約をキャンセルいたしました。",
         refund: {
           title: "返金について",
-          message: "事前決済をされている場合、3-5営業日以内に返金処理を行います。",
+          message:
+            "事前決済をされている場合、3-5営業日以内に返金処理を行います。",
         },
         rebook: {
           title: "再予約について",
@@ -267,6 +284,8 @@ const dictionaries = {
       paymentTitle: "Payment method",
       paymentPayInStore: "Pay at the salon",
       paymentPrepay: "Prepay online (credit card)",
+      paymentTtlNotice:
+        "You have 15 minutes to complete payment. Otherwise your reservation will be automatically cancelled.",
       submit: "Proceed to Stripe checkout",
       submitNoPrepayment: "Confirm reservation",
       summary: "Summary",
@@ -310,10 +329,19 @@ const dictionaries = {
         },
       },
       confirmation: {
-        subject: "[Cotoka] Booking Confirmation - {serviceName}",
+        subject:
+          "[Cotoka] Booking Confirmation (Reservation Code: {code}) - {serviceName}",
         title: "Thank you for your booking",
         greeting: "Dear {customerName},",
-        message: "We have confirmed your reservation with the following details:",
+        message:
+          "We have confirmed your reservation with the following details:",
+        cta: {
+          view: "View your reservation online",
+          manage: "View/Modify Reservation",
+          manageHelp:
+            "You can look up using your reservation code and your email or phone. Even if the link expires, you can still verify from here.",
+        },
+        codeLabel: "Reservation Code",
         details: {
           service: "Service",
           staff: "Therapist",
@@ -338,10 +366,17 @@ const dictionaries = {
           items: [
             "Please arrive 5 minutes before your appointment",
             "We provide changing clothes",
-            "Feel free to contact us if you have any questions"
+            "Feel free to contact us if you have any questions",
           ],
         },
         contact: "Contact Us",
+        ttlNote:
+          "The online verification link is valid for {days} days. If it expires, you can still look up using your reservation code and contact.",
+        registeredContact: {
+          title: "Registered Contact",
+          email: "Email",
+          phone: "Phone",
+        },
       },
       reminder: {
         subject24h: "[Cotoka] Tomorrow's Appointment - {serviceName}",
@@ -356,7 +391,7 @@ const dictionaries = {
           items: [
             "Please wear comfortable clothing",
             "We will keep your valuables safe",
-            "Let us know if you have any questions in advance"
+            "Let us know if you have any questions in advance",
           ],
         },
       },
@@ -367,7 +402,8 @@ const dictionaries = {
         message: "We have cancelled the following reservation:",
         refund: {
           title: "About Refunds",
-          message: "If you made a prepayment, we will process the refund within 3-5 business days.",
+          message:
+            "If you made a prepayment, we will process the refund within 3-5 business days.",
         },
         rebook: {
           title: "Rebooking",
@@ -455,6 +491,7 @@ const dictionaries = {
       paymentTitle: "付款方式",
       paymentPayInStore: "到店支付",
       paymentPrepay: "在線預付（信用卡）",
+      paymentTtlNotice: "請在15分鐘內完成付款，否則預約將自動取消。",
       submit: "前往 Stripe 付款",
       submitNoPrepayment: "確認預約",
       summary: "預約摘要",
@@ -498,10 +535,17 @@ const dictionaries = {
         },
       },
       confirmation: {
-        subject: "【Cotoka】預約確認 - {serviceName}",
+        subject: "【Cotoka】預約確認（預約編號: {code}） - {serviceName}",
         title: "感謝您的預約",
         greeting: "{customerName} 您好，",
         message: "我們已確認您的預約，詳細內容如下：",
+        cta: {
+          view: "線上查看預約詳情",
+          manage: "查詢／修改預約",
+          manageHelp:
+            "可使用預約編號與電子郵件或電話查詢。即使連結過期也可在此確認。",
+        },
+        codeLabel: "預約編號",
         details: {
           service: "服務",
           staff: "理療師",
@@ -526,10 +570,17 @@ const dictionaries = {
           items: [
             "請於預約時間前5分鐘到達",
             "我們提供更衣服務",
-            "如有任何疑問請隨時聯絡我們"
+            "如有任何疑問請隨時聯絡我們",
           ],
         },
         contact: "聯絡我們",
+        ttlNote:
+          "線上確認連結有效期為 {days} 天。即使過期，也可用預約編號與聯絡資訊查詢。",
+        registeredContact: {
+          title: "已登記聯絡資訊",
+          email: "電子郵件",
+          phone: "電話",
+        },
       },
       reminder: {
         subject24h: "【Cotoka】明日預約提醒 - {serviceName}",
@@ -544,7 +595,7 @@ const dictionaries = {
           items: [
             "請穿著舒適的服裝",
             "貴重物品我們會妥善保管",
-            "如有疑問請提前告知"
+            "如有疑問請提前告知",
           ],
         },
       },

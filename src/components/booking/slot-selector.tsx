@@ -84,7 +84,10 @@ export default function SlotSelector({
 
         if (!response.ok) {
           const payload = await response.json().catch(() => ({}));
-          const message = typeof (payload as any)?.message === "string" ? (payload as any).message : "Failed to load slots";
+          const message =
+            typeof (payload as any)?.message === "string"
+              ? (payload as any).message
+              : "Failed to load slots";
           throw new Error(message);
         }
 
@@ -229,13 +232,20 @@ export default function SlotSelector({
               ))}
             </div>
           ) : error ? (
-            <div className="rounded-md bg-red-50 p-3 text-sm text-red-600" role="alert" aria-live="polite">
+            <div
+              className="rounded-md bg-red-50 p-3 text-sm text-red-600"
+              role="alert"
+              aria-live="polite"
+            >
               {error}
             </div>
           ) : slots.length === 0 ? (
             <div className="rounded-2xl border bg-[var(--accent)]/8 p-4 text-[var(--ink)]">
               <div className="mb-2 text-sm">{dict.select.noSlots}</div>
-              <div className="text-xs text-slate-600">{dict.booking.empty?.noSlotsHint ?? "別の日や別の担当者をご検討ください。"}</div>
+              <div className="text-xs text-slate-600">
+                {dict.booking.empty?.noSlotsHint ??
+                  "別の日や別の担当者をご検討ください。"}
+              </div>
               <div className="mt-3 flex gap-2">
                 <Button
                   variant="outline"
@@ -243,7 +253,10 @@ export default function SlotSelector({
                   aria-label="別の週を表示"
                   onClick={() =>
                     setDayOffset((offset) =>
-                      Math.min(TOTAL_DAYS - DAYS_VISIBLE, offset + DAYS_VISIBLE),
+                      Math.min(
+                        TOTAL_DAYS - DAYS_VISIBLE,
+                        offset + DAYS_VISIBLE,
+                      ),
                     )
                   }
                 >
@@ -269,37 +282,39 @@ export default function SlotSelector({
             </div>
           ) : (
             <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-              {slots.map((slot) => {
-                const startDate = new Date(slot.start);
-                const endDate = new Date(slot.end);
-                if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
-                  console.warn("Invalid slot time:", slot);
-                  return null;
-                }
-                const isSelected = Boolean(
-                  selectedSlot &&
-                  selectedSlot.staffId === slot.staffId &&
-                  selectedSlot.start === slot.start
-                );
-                return (
-                  <Button
-                    key={`${slot.staffId}-${slot.start}`}
-                    variant="outline"
-                    className={cn(
-                      "justify-start focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--primary)] focus-visible:ring-offset-2",
-                      isSelected
-                        ? "border-slate-900 bg-slate-900 text-white"
-                        : ""
-                    )}
-                    disabled={isPending}
-                    onClick={() => handleSelectSlot(slot)}
-                    aria-label={`時間 ${format(startDate, "HH:mm")} - ${format(endDate, "HH:mm")} を選択`}
-                    aria-selected={isSelected}
-                  >
-                    {format(startDate, "HH:mm")} - {format(endDate, "HH:mm")}
-                  </Button>
-                );
-              }).filter(Boolean)}
+              {slots
+                .map((slot) => {
+                  const startDate = new Date(slot.start);
+                  const endDate = new Date(slot.end);
+                  if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
+                    console.warn("Invalid slot time:", slot);
+                    return null;
+                  }
+                  const isSelected = Boolean(
+                    selectedSlot &&
+                      selectedSlot.staffId === slot.staffId &&
+                      selectedSlot.start === slot.start,
+                  );
+                  return (
+                    <Button
+                      key={`${slot.staffId}-${slot.start}`}
+                      variant="outline"
+                      className={cn(
+                        "justify-start focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--primary)] focus-visible:ring-offset-2",
+                        isSelected
+                          ? "border-slate-900 bg-slate-900 text-white"
+                          : "",
+                      )}
+                      disabled={isPending}
+                      onClick={() => handleSelectSlot(slot)}
+                      aria-label={`時間 ${format(startDate, "HH:mm")} - ${format(endDate, "HH:mm")} を選択`}
+                      aria-selected={isSelected}
+                    >
+                      {format(startDate, "HH:mm")} - {format(endDate, "HH:mm")}
+                    </Button>
+                  );
+                })
+                .filter(Boolean)}
             </div>
           )}
         </div>

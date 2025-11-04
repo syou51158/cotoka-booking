@@ -3,7 +3,11 @@ import { useState } from "react";
 import type { BusinessProfile } from "@/server/settings";
 import { showToast } from "@/lib/toast";
 
-export default function AdminSettingsForm({ initial }: { initial: BusinessProfile }) {
+export default function AdminSettingsForm({
+  initial,
+}: {
+  initial: BusinessProfile;
+}) {
   const [form, setForm] = useState({
     salon_name: initial.salon_name,
     phone: initial.phone ?? "",
@@ -32,9 +36,17 @@ export default function AdminSettingsForm({ initial }: { initial: BusinessProfil
         throw new Error(payload?.error || "保存に失敗しました");
       }
       const saved: BusinessProfile = await res.json();
-      showToast({ variant: "success", title: "保存しました", description: "設定が反映されました" });
+      showToast({
+        variant: "success",
+        title: "保存しました",
+        description: "設定が反映されました",
+      });
     } catch (error) {
-      showToast({ variant: "error", title: "保存に失敗", description: (error as Error).message });
+      showToast({
+        variant: "error",
+        title: "保存に失敗",
+        description: (error as Error).message,
+      });
     } finally {
       setSaving(false);
     }
@@ -45,7 +57,12 @@ export default function AdminSettingsForm({ initial }: { initial: BusinessProfil
       <input
         value={(form as any)[name]}
         onChange={(e) => setForm((f) => ({ ...f, [name]: e.target.value }))}
-        style={{ width: "100%", padding: 8, border: "1px solid #ccc", borderRadius: 6 }}
+        style={{
+          width: "100%",
+          padding: 8,
+          border: "1px solid #ccc",
+          borderRadius: 6,
+        }}
         {...props}
       />
     );
@@ -73,8 +90,15 @@ export default function AdminSettingsForm({ initial }: { initial: BusinessProfil
         既定ロケール
         <select
           value={form.default_locale}
-          onChange={(e) => setForm((f) => ({ ...f, default_locale: e.target.value as any }))}
-          style={{ width: "100%", padding: 8, border: "1px solid #ccc", borderRadius: 6 }}
+          onChange={(e) =>
+            setForm((f) => ({ ...f, default_locale: e.target.value as any }))
+          }
+          style={{
+            width: "100%",
+            padding: 8,
+            border: "1px solid #ccc",
+            borderRadius: 6,
+          }}
         >
           <option value="ja">ja</option>
           <option value="en">en</option>
@@ -107,7 +131,16 @@ export default function AdminSettingsForm({ initial }: { initial: BusinessProfil
         マップURL
         {input("map_url")}
       </label>
-      <button onClick={save} disabled={saving} style={{ padding: "8px 12px", borderRadius: 6, background: saving ? "#888" : "#222", color: "#fff" }}>
+      <button
+        onClick={save}
+        disabled={saving}
+        style={{
+          padding: "8px 12px",
+          borderRadius: 6,
+          background: saving ? "#888" : "#222",
+          color: "#fff",
+        }}
+      >
         {saving ? "保存中..." : "保存"}
       </button>
     </div>

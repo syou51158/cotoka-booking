@@ -59,11 +59,14 @@ export async function verifyAdminAuth(request: Request) {
     return { success: false, error: "No authentication cookie" };
   }
 
-  const cookies = cookieHeader.split(";").reduce((acc, cookie) => {
-    const [key, value] = cookie.trim().split("=");
-    acc[key] = value;
-    return acc;
-  }, {} as Record<string, string>);
+  const cookies = cookieHeader.split(";").reduce(
+    (acc, cookie) => {
+      const [key, value] = cookie.trim().split("=");
+      acc[key] = value;
+      return acc;
+    },
+    {} as Record<string, string>,
+  );
 
   const token = cookies[ADMIN_COOKIE];
   if (!token) {

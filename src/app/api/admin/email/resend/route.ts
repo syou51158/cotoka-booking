@@ -1,23 +1,31 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createSupabaseServiceRoleClient } from "@/lib/supabase";
 import { verifyAdminAuth } from "@/lib/admin-auth";
-import { sendReservationConfirmationEmail, sendEmailWithRetry } from "@/server/notifications";
+import {
+  sendReservationConfirmationEmail,
+  sendEmailWithRetry,
+} from "@/server/notifications";
+import { isSmtpConfigured } from "@/server/email/smtp";
 import { getBusinessProfile } from "@/server/settings";
-import { renderCancellationEmail, renderReminderEmail } from "@/lib/email-renderer";
+import {
+  renderCancellationEmail,
+  renderReminderEmail,
+} from "@/lib/email-renderer";
 import { recordEvent } from "@/server/events";
-import { checkRateLimit, checkEmailResendRateLimit } from '@/lib/rate-limit';
-import { checkEmailIdempotency } from '@/lib/idempotency';
-
-
+import { checkRateLimit, checkEmailResendRateLimit } from "@/lib/rate-limit";
+import { checkEmailIdempotency } from "@/lib/idempotency";
 
 export async function POST(request: NextRequest) {
   // 本番環境での追加セキュリティチェック
-  if (process.env.NODE_ENV === 'production') {
+  if (process.env.NODE_ENV === "production") {
     // 本番環境では管理者メールドメインを制限
-    const allowedDomains = process.env.ADMIN_EMAIL_DOMAINS?.split(',') || [];
+    const allowedDomains = process.env.ADMIN_EMAIL_DOMAINS?.split(",") || [];
     if (allowedDomains.length === 0) {
-      console.error('ADMIN_EMAIL_DOMAINS not configured in production');
-      return NextResponse.json({ error: 'Service unavailable' }, { status: 503 });
+      console.error("ADMIN_EMAIL_DOMAINS not configured in production");
+      return NextResponse.json(
+        { error: "Service unavailable" },
+        { status: 503 },
+      );
     }
   }
 
@@ -37,71 +45,85 @@ export async function POST(request: NextRequest) {
     if (!reservationId || !kind) {
       return NextResponse.json(
         { error: "reservationId and kind are required" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
     if (!["confirmation", "24h", "2h", "cancel"].includes(kind)) {
       return NextResponse.json(
-        { error: "Invalid kind. Must be one of: confirmation, 24h, 2h, cancel" },
-        { status: 400 }
+        {
+          error: "Invalid kind. Must be one of: confirmation, 24h, 2h, cancel",
+        },
+        { status: 400 },
       );
     }
 
     // IP制限チェック（1時間に10回まで）
     const ipRateLimit = checkRateLimit(request, {
       windowMs: 60 * 60 * 1000, // 1時間
-      maxRequests: 10
+      maxRequests: 10,
     });
-    
+
     if (!ipRateLimit.success) {
-      const remainingMinutes = Math.ceil((ipRateLimit.resetTime - Date.now()) / 1000 / 60);
+      const remainingMinutes = Math.ceil(
+        (ipRateLimit.resetTime - Date.now()) / 1000 / 60,
+      );
       return NextResponse.json(
-        { 
+        {
           error: `レート制限に達しました。${remainingMinutes}分後に再試行してください`,
-          retryAfter: ipRateLimit.resetTime
+          retryAfter: ipRateLimit.resetTime,
         },
-        { 
+        {
           status: 429,
           headers: {
-            'Retry-After': Math.ceil((ipRateLimit.resetTime - Date.now()) / 1000).toString(),
-            'X-RateLimit-Limit': ipRateLimit.limit.toString(),
-            'X-RateLimit-Remaining': ipRateLimit.remaining.toString(),
-            'X-RateLimit-Reset': ipRateLimit.resetTime.toString()
-          }
-        }
+            "Retry-After": Math.ceil(
+              (ipRateLimit.resetTime - Date.now()) / 1000,
+            ).toString(),
+            "X-RateLimit-Limit": ipRateLimit.limit.toString(),
+            "X-RateLimit-Remaining": ipRateLimit.remaining.toString(),
+            "X-RateLimit-Reset": ipRateLimit.resetTime.toString(),
+          },
+        },
       );
     }
 
     // メール再送制限チェック（15分間に1回まで）
     const emailRateLimit = checkEmailResendRateLimit(reservationId, kind);
-    
+
     if (!emailRateLimit.success) {
-      const remainingMinutes = Math.ceil((emailRateLimit.resetTime - Date.now()) / 1000 / 60);
+      const remainingMinutes = Math.ceil(
+        (emailRateLimit.resetTime - Date.now()) / 1000 / 60,
+      );
       return NextResponse.json(
-        { 
+        {
           error: `この予約のメール再送は${remainingMinutes}分後に可能です`,
-          retryAfter: emailRateLimit.resetTime
+          retryAfter: emailRateLimit.resetTime,
         },
-        { 
+        {
           status: 429,
           headers: {
-            'Retry-After': Math.ceil((emailRateLimit.resetTime - Date.now()) / 1000).toString()
-          }
-        }
+            "Retry-After": Math.ceil(
+              (emailRateLimit.resetTime - Date.now()) / 1000,
+            ).toString(),
+          },
+        },
       );
     }
 
     // 冪等性チェック（重複送信防止）
-    const idempotencyCheck = await checkEmailIdempotency(reservationId, kind, 15);
-    
+    const idempotencyCheck = await checkEmailIdempotency(
+      reservationId,
+      kind,
+      15,
+    );
+
     if (!idempotencyCheck.isAllowed) {
       return NextResponse.json(
-        { 
-          error: idempotencyCheck.reason || '重複送信が検出されました',
-          lastSentAt: idempotencyCheck.lastSentAt
+        {
+          error: idempotencyCheck.reason || "重複送信が検出されました",
+          lastSentAt: idempotencyCheck.lastSentAt,
         },
-        { status: 409 } // Conflict
+        { status: 409 }, // Conflict
       );
     }
 
@@ -116,20 +138,21 @@ export async function POST(request: NextRequest) {
     if (reservationError || !reservation) {
       return NextResponse.json(
         { error: "Reservation not found" },
-        { status: 404 }
+        { status: 404 },
       );
     }
 
     if (!reservation.customer_email) {
       return NextResponse.json(
         { error: "予約にメールアドレスがありません" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
     // 予約のロケールを取得（デフォルトは日本語）
     const rawLocale: string | null = reservation.locale;
-    const locale: 'ja' | 'en' | 'zh' = rawLocale === 'en' || rawLocale === 'zh' ? rawLocale : 'ja';
+    const locale: "ja" | "en" | "zh" =
+      rawLocale === "en" || rawLocale === "zh" ? rawLocale : "ja";
 
     // レンダラーが期待する形に変換
     const baseReservation = {
@@ -141,8 +164,12 @@ export async function POST(request: NextRequest) {
       status: reservation.status,
       code: reservation.code,
       notes: reservation.notes ?? undefined,
-      service: reservation.service ? { name: reservation.service.name, duration_min: 60 } : null,
-      staff: reservation.staff ? { display_name: reservation.staff.display_name, email: "" } : null,
+      service: reservation.service
+        ? { name: reservation.service.name, duration_min: 60 }
+        : null,
+      staff: reservation.staff
+        ? { display_name: reservation.staff.display_name, email: "" }
+        : null,
     };
 
     try {
@@ -154,44 +181,69 @@ export async function POST(request: NextRequest) {
           break;
         case "cancel":
           {
-            const emailContent = await renderCancellationEmail({
-              ...baseReservation,
-              hasPrepayment: baseReservation.total_amount > 0
-            }, locale);
-            
+            const emailContent = await renderCancellationEmail(
+              {
+                ...baseReservation,
+                hasPrepayment: baseReservation.total_amount > 0,
+              },
+              locale,
+            );
+
             await sendEmailWithRetry({
               to: baseReservation.customer_email,
               subject: emailContent.subject,
               html: emailContent.html,
-              meta: { kind: "cancellation", reservation_id: reservation.id, locale },
+              meta: {
+                kind: "cancellation",
+                reservation_id: reservation.id,
+                locale,
+              },
               from: profile.email_from,
             });
           }
           break;
         case "24h":
           {
-            const emailContent = await renderReminderEmail(baseReservation, '24h', locale);
-            
+            const emailContent = await renderReminderEmail(
+              baseReservation,
+              "24h",
+              locale,
+            );
+
             await sendEmailWithRetry({
               to: baseReservation.customer_email,
               subject: emailContent.subject,
               html: emailContent.html,
               attachments: emailContent.attachments,
-              meta: { kind: "reminder", hours_before: 24, reservation_id: reservation.id, locale },
+              meta: {
+                kind: "reminder",
+                hours_before: 24,
+                reservation_id: reservation.id,
+                locale,
+              },
               from: profile.email_from,
             });
           }
           break;
         case "2h":
           {
-            const emailContent = await renderReminderEmail(baseReservation, '2h', locale);
-            
+            const emailContent = await renderReminderEmail(
+              baseReservation,
+              "2h",
+              locale,
+            );
+
             await sendEmailWithRetry({
               to: baseReservation.customer_email,
               subject: emailContent.subject,
               html: emailContent.html,
               attachments: emailContent.attachments,
-              meta: { kind: "reminder", hours_before: 2, reservation_id: reservation.id, locale },
+              meta: {
+                kind: "reminder",
+                hours_before: 2,
+                reservation_id: reservation.id,
+                locale,
+              },
               from: profile.email_from,
             });
           }
@@ -200,47 +252,57 @@ export async function POST(request: NextRequest) {
           throw new Error(`Unsupported email kind: ${kind}`);
       }
 
-      // 成功時のイベント記録
+      // 成功時のイベント記録（provider を動的設定）
+      const providerGuess: "smtp" | "dry_run" = isSmtpConfigured()
+        ? "smtp"
+        : "dry_run";
       await recordEvent("email_sent", {
         reservation_id: reservationId,
         kind,
         source: "admin_resend",
         customer_email: reservation.customer_email,
         locale,
-        provider: "smtp"
+        provider: providerGuess,
       });
 
       return NextResponse.json({
         success: true,
         message: "Email sent successfully",
         kind,
-        reservationId
+        reservationId,
       });
-
     } catch (emailError) {
       console.error("Failed to send email:", emailError);
 
-      // 失敗時のイベント記録
+      // 失敗時のイベント記録（provider_guess と error_message を含む）
+      const provider_guess: "smtp" | "dry_run" = isSmtpConfigured()
+        ? "smtp"
+        : "dry_run";
       await recordEvent("email_send_failed", {
         reservation_id: reservationId,
         kind,
         source: "admin_resend",
         customer_email: reservation.customer_email,
         locale,
-        error: emailError instanceof Error ? emailError.message : "Unknown error"
+        provider_guess,
+        error_message:
+          emailError instanceof Error ? emailError.message : "Unknown error",
       });
 
       return NextResponse.json(
-        { error: "Failed to send email", details: emailError instanceof Error ? emailError.message : "Unknown error" },
-        { status: 500 }
+        {
+          error: "Failed to send email",
+          details:
+            emailError instanceof Error ? emailError.message : "Unknown error",
+        },
+        { status: 500 },
       );
     }
-
   } catch (error) {
     console.error("Resend API error:", error);
     return NextResponse.json(
       { error: "Internal server error" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

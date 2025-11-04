@@ -26,7 +26,8 @@ export async function GET(request: Request) {
       : null;
     const profile = await getBusinessProfile();
     const siteName = profile.salon_name;
-    const addressLine = profile.address_ja ?? profile.address_en ?? profile.address_zh ?? "";
+    const addressLine =
+      profile.address_ja ?? profile.address_en ?? profile.address_zh ?? "";
     const websiteUrl = profile.website_url ?? undefined;
     const title = `${siteName} - ${service?.name ?? "ご予約"}`;
     const descriptionLines = [

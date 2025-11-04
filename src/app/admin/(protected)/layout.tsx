@@ -5,12 +5,12 @@ import { requireAdmin } from "@/lib/admin-auth";
 import { currentProjectRef, EXPECTED_PROJECT_REF } from "@/lib/env";
 import { logout } from "../(auth)/login/actions";
 
-export default function AdminProtectedLayout({
+export default async function AdminProtectedLayout({
   children,
 }: {
   children: ReactNode;
 }) {
-  requireAdmin();
+  await requireAdmin();
 
   return (
     <div className="flex min-h-screen flex-col bg-slate-950 text-slate-100">
@@ -49,7 +49,8 @@ export default function AdminProtectedLayout({
         </div>
         {/* Environment banner showing Supabase project ref */}
         {(() => {
-          const mismatch = currentProjectRef && currentProjectRef !== EXPECTED_PROJECT_REF;
+          const mismatch =
+            currentProjectRef && currentProjectRef !== EXPECTED_PROJECT_REF;
           const base = "border-t";
           const okStyle = "border-slate-800 bg-slate-800/40 text-slate-300";
           const badStyle = "border-red-700 bg-red-600/20 text-red-200";
@@ -59,7 +60,9 @@ export default function AdminProtectedLayout({
               <div className="mx-auto w-full max-w-6xl px-4 py-2 text-xs">
                 DB: {currentProjectRef ?? "(未設定)"}（envから検出）
                 {mismatch ? (
-                  <span className="ml-2 font-semibold">Mismatch: 期待値 {EXPECTED_PROJECT_REF}</span>
+                  <span className="ml-2 font-semibold">
+                    Mismatch: 期待値 {EXPECTED_PROJECT_REF}
+                  </span>
                 ) : null}
               </div>
             </div>

@@ -29,6 +29,7 @@ Cotoka Booking システムでは、以下のメール送信機能を提供し�
 Resendでドメイン追加後、以下のDNSレコードが表示されます：
 
 **必要なCNAMEレコード例：**
+
 ```
 # DKIM認証用
 resend._domainkey.cotoka.jp → resend1._domainkey.resend.com
@@ -47,12 +48,12 @@ _dmarc.cotoka.jp → "v=DMARC1; p=quarantine; rua=mailto:dmarc@cotoka.jp"
 4. 「カスタム設定」を選択
 5. 以下のレコードを追加：
 
-| サブドメイン | 種別 | 内容 |
-|-------------|------|------|
-| `resend._domainkey` | CNAME | `resend1._domainkey.resend.com` |
-| `resend2._domainkey` | CNAME | `resend2._domainkey.resend.com` |
-| `@` | TXT | `v=spf1 include:_spf.resend.com ~all` |
-| `_dmarc` | TXT | `v=DMARC1; p=quarantine; rua=mailto:dmarc@cotoka.jp` |
+| サブドメイン         | 種別  | 内容                                                 |
+| -------------------- | ----- | ---------------------------------------------------- |
+| `resend._domainkey`  | CNAME | `resend1._domainkey.resend.com`                      |
+| `resend2._domainkey` | CNAME | `resend2._domainkey.resend.com`                      |
+| `@`                  | TXT   | `v=spf1 include:_spf.resend.com ~all`                |
+| `_dmarc`             | TXT   | `v=DMARC1; p=quarantine; rua=mailto:dmarc@cotoka.jp` |
 
 6. 「設定」をクリックして保存
 
@@ -63,6 +64,7 @@ _dmarc.cotoka.jp → "v=DMARC1; p=quarantine; rua=mailto:dmarc@cotoka.jp"
 3. ステータスが「Verified」になることを確認
 
 **確認コマンド（ローカル）：**
+
 ```bash
 # DKIM確認
 dig TXT resend._domainkey.cotoka.jp
@@ -95,6 +97,7 @@ ALLOW_DEV_MOCKS=false
 ```
 
 **メール送信者設定：**
+
 - **From:** `"Cotoka" <info@cotoka.jp>` （表示名付き）
 - **Reply-To:** `info@cotoka.jp` （返信先統一）
 
@@ -109,6 +112,7 @@ curl http://localhost:3001/api/health/email
 ```
 
 期待される応答：
+
 ```json
 {
   "status": "ok",
@@ -153,16 +157,18 @@ curl -X POST -H "Content-Type: application/json" \
 ### メール送信が失敗する場合
 
 1. **設定確認**
+
    ```bash
    curl http://localhost:3001/api/health/email
    ```
 
 2. **ログ確認**
+
    ```sql
-   SELECT type, payload, created_at 
-   FROM events 
-   WHERE type LIKE '%email%' 
-   ORDER BY created_at DESC 
+   SELECT type, payload, created_at
+   FROM events
+   WHERE type LIKE '%email%'
+   ORDER BY created_at DESC
    LIMIT 10;
    ```
 
@@ -196,7 +202,7 @@ curl "http://localhost:3001/api/dev/mock/checkout-complete?rid=RESERVATION_ID"
 name: reservation-reminders
 on:
   schedule:
-    - cron: '*/15 * * * *'
+    - cron: "*/15 * * * *"
 jobs:
   send-reminders:
     runs-on: ubuntu-latest

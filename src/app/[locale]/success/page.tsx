@@ -10,6 +10,7 @@ import { formatCurrency } from "@/lib/format";
 import { getReservationById } from "@/server/reservations";
 import { getServiceById } from "@/server/services";
 import PaymentConfirm from "@/components/success/payment-confirm";
+import HoldFinalizer from "@/components/success/hold-finalizer";
 
 interface Props {
   params: Promise<{ locale: string }>;
@@ -40,7 +41,10 @@ export default async function SuccessPage({ params, searchParams }: Props) {
       ? (profile.address_en ?? profile.address_ja ?? "")
       : resolved.locale === "zh"
         ? (profile.address_zh ?? profile.address_ja ?? "")
-        : (profile.address_ja ?? profile.address_en ?? profile.address_zh ?? "");
+        : (profile.address_ja ??
+          profile.address_en ??
+          profile.address_zh ??
+          "");
 
   const icsDownloadHref = reservation
     ? `/api/ics?rid=${encodeURIComponent(reservation.id)}`
@@ -79,18 +83,27 @@ export default async function SuccessPage({ params, searchParams }: Props) {
     : null;
 
   const showPaymentHelp =
-    reservation && !csId && ["unpaid", "confirmed", "pending", "processing"].includes(reservation.status as any);
+    reservation &&
+    !csId &&
+    ["unpaid", "confirmed", "pending", "processing"].includes(
+      reservation.status as any,
+    );
   const showOnsitePaymentNotice =
     !!reservation &&
     !csId &&
-    (((reservation as any).payment_option ?? "pay_in_store") === "pay_in_store") &&
-    (["confirmed", "unpaid", "pending", "processing"].includes(reservation.status as any));
+    ((reservation as any).payment_option ?? "pay_in_store") ===
+      "pay_in_store" &&
+    ["confirmed", "unpaid", "pending", "processing"].includes(
+      reservation.status as any,
+    );
 
   // 決済確認ウィジェットの表示は、Stripe セッションIDが存在し、なおかつ予約が未支払い/未確定系のときのみ
   const canShowPaymentConfirm =
     !!reservation &&
     !!csId &&
-    (["unpaid", "confirmed", "pending", "processing"].includes(reservation.status as any));
+    ["unpaid", "confirmed", "pending", "processing"].includes(
+      reservation.status as any,
+    );
 
   return (
     <div className="mx-auto flex min-h-[60vh] w-full max-w-2xl items-center px-4 py-16">
@@ -101,6 +114,8 @@ export default async function SuccessPage({ params, searchParams }: Props) {
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-6 text-sm text-slate-600">
+          {/* 決済完了後のホールド確定・通知（クライアントサイド） */}
+          <HoldFinalizer />
           <p>{dict.status.success}</p>
           <p>
             ご予約内容は登録いただいたメールアドレスへ送信されます。届かない場合は迷惑メールをご確認のうえ、お電話でお問い合わせください。
@@ -145,12 +160,18 @@ export default async function SuccessPage({ params, searchParams }: Props) {
 
           {showPaymentHelp ? (
             <div className="rounded-lg border border-slate-200 bg-white p-4 text-sm text-slate-700">
-              <p className="text-xs uppercase tracking-wide text-slate-500">お支払いについて</p>
+              <p className="text-xs uppercase tracking-wide text-slate-500">
+                お支払いについて
+              </p>
               <p>
                 来店時の現金またはカードでお支払い可能です。オンライン事前決済をご希望の場合は、本人確認ページから手続きできます。
               </p>
               <div className="mt-3">
-                <Button asChild variant="secondary" className="w-full sm:w-auto">
+                <Button
+                  asChild
+                  variant="secondary"
+                  className="w-full sm:w-auto"
+                >
                   <Link href={`/${locale}/manage`}>本人確認ページを開く</Link>
                 </Button>
               </div>
@@ -167,10 +188,14 @@ export default async function SuccessPage({ params, searchParams }: Props) {
             </p>
             <div className="mt-3 flex flex-col gap-2 sm:flex-row">
               <Button asChild className="w-full sm:w-auto">
-                <a href={mapUrl} target="_blank" rel="noreferrer">Googleマップで見る</a>
+                <a href={mapUrl} target="_blank" rel="noreferrer">
+                  Googleマップで見る
+                </a>
               </Button>
               <Button asChild variant="outline" className="w-full sm:w-auto">
-                <a href={mapUrl} target="_blank" rel="noreferrer">経路案内を開く</a>
+                <a href={mapUrl} target="_blank" rel="noreferrer">
+                  経路案内を開く
+                </a>
               </Button>
             </div>
           </div>

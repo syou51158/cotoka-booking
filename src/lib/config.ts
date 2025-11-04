@@ -21,7 +21,8 @@ export const SALON_ADDRESS = {
 };
 export const SALON_PHONE = process.env.NEXT_PUBLIC_SALON_PHONE ?? ""; // 実番号がある場合は .env で設定
 export const SALON_MAP_URL =
-  process.env.NEXT_PUBLIC_SALON_MAP_URL ?? "https://maps.app.goo.gl/4i7d4gRZdVhtzK4w7";
+  process.env.NEXT_PUBLIC_SALON_MAP_URL ??
+  "https://maps.app.goo.gl/4i7d4gRZdVhtzK4w7";
 export const SALON_PRICE_RANGE = "¥¥";
 
 // 営業時間（例: 毎日 10:00-20:00）。JSON-LDでは OpeningHoursSpecification に展開。
@@ -37,8 +38,18 @@ export const SALON_OPENING_HOURS = [
 
 // トップページ用の価格表フォールバック（services API が空のときに使用）
 export const FALLBACK_SERVICES = [
-  { id: "fallback-60", name: "ボディケア 60分", duration_min: 60, price_jpy: 9900 },
-  { id: "fallback-90", name: "ボディケア 90分", duration_min: 90, price_jpy: 13900 },
+  {
+    id: "fallback-60",
+    name: "ボディケア 60分",
+    duration_min: 60,
+    price_jpy: 9900,
+  },
+  {
+    id: "fallback-90",
+    name: "ボディケア 90分",
+    duration_min: 90,
+    price_jpy: 13900,
+  },
 ];
 
 // キャンセルポリシー（表示用）

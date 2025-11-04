@@ -8,19 +8,22 @@ export async function resolveBaseUrl(req: Request, opts: Opts = {}) {
   const host = xfHost ?? h.get("host");
   const proto = h.get("x-forwarded-proto") ?? "http";
 
-  const envUrl = process.env.SITE_URL && process.env.SITE_URL.startsWith("http")
-    ? process.env.SITE_URL
-    : "";
+  const envUrl =
+    process.env.SITE_URL && process.env.SITE_URL.startsWith("http")
+      ? process.env.SITE_URL
+      : "";
 
-  const allow = opts.allowHosts ?? (
+  const allow =
+    opts.allowHosts ??
     process.env.ALLOWED_BASE_HOSTS?.split(",")
       .map((s) => s.trim())
-      .filter(Boolean) ?? []
-  );
+      .filter(Boolean) ??
+    [];
 
-  let base = host ? `${proto}://${host}` : (envUrl || new URL(req.url).origin);
+  let base = host ? `${proto}://${host}` : envUrl || new URL(req.url).origin;
 
-  const enforceHttps = opts.enforceHttpsInProd ?? process.env.NODE_ENV === "production";
+  const enforceHttps =
+    opts.enforceHttpsInProd ?? process.env.NODE_ENV === "production";
   if (enforceHttps && base.startsWith("http://")) {
     base = base.replace("http://", "https://");
   }

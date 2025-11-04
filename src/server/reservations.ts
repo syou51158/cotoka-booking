@@ -10,21 +10,22 @@ import { sendReservationConfirmationEmail } from "./notifications";
 
 const randomCode = customAlphabet("ABCDEFGHJKLMNPQRSTUVWXYZ23456789", 4);
 
+// ペンディング予約のTTL（分）
+const PENDING_TTL_MINUTES = 15;
+
 // Promiseユーティリティ: 指定時間を超えたらタイムアウトとして失敗させる
 async function withTimeout<T>(p: Promise<T>, ms = 12000): Promise<T> {
   return new Promise<T>((resolve, reject) => {
     const t = setTimeout(() => {
       reject(new Error(`DB operation timeout after ${ms}ms`));
     }, ms);
-    p
-      .then((v) => {
-        clearTimeout(t);
-        resolve(v);
-      })
-      .catch((e) => {
-        clearTimeout(t);
-        reject(e);
-      });
+    p.then((v) => {
+      clearTimeout(t);
+      resolve(v);
+    }).catch((e) => {
+      clearTimeout(t);
+      reject(e);
+    });
   });
 }
 
@@ -99,10 +100,14 @@ export async function markReservationPaid(
   payload: Partial<Database["public"]["Tables"]["reservations"]["Update"]>,
 ): Promise<ReservationRow | null> {
   const client = createSupabaseServiceRoleClient() as any;
+  const statusNext = payload.status as ReservationRow["status"] | undefined;
+  const shouldClearPendingTtl =
+    statusNext === "paid" || statusNext === "confirmed";
   const { data, error } = await client
     .from("reservations")
     .update({
       updated_at: new Date().toISOString(),
+      pending_expires_at: shouldClearPendingTtl ? null : undefined,
       ...payload,
     })
     .eq("id", reservationId)
@@ -116,7 +121,9 @@ export async function markReservationPaid(
   return data as ReservationRow | null;
 }
 
-export async function createPendingReservation(input: CreateReservationInput): Promise<CreatePendingReservationResult> {
+export async function createPendingReservation(
+  input: CreateReservationInput,
+): Promise<CreatePendingReservationResult> {
   const client = createSupabaseServiceRoleClient() as any;
   const {
     serviceId,
@@ -161,16 +168,12 @@ export async function createPendingReservation(input: CreateReservationInput): P
 
   console.log("[reservations] service fetch start", { serviceId });
   const serviceRes = await withTimeout(
-    client
-      .from("services")
-      .select("*")
-      .eq("id", serviceId)
-      .maybeSingle(),
+    client.from("services").select("*").eq("id", serviceId).maybeSingle(),
     12000,
   ).catch((e: unknown) => {
     console.warn("[reservations] service fetch error", e);
     if (e instanceof Error && /timeout/i.test(e.message)) {
-      return { data: null, error: { code: "DB_TIMEOUT" } } as any;
+      return { data: null, error: { code: "DB_TIMEOUT" } } as const;
     }
     throw e;
   });
@@ -186,7 +189,10 @@ export async function createPendingReservation(input: CreateReservationInput): P
   if (!service) {
     return {
       error: {
-        code: serviceRes?.error?.code === "DB_TIMEOUT" ? "DB_TIMEOUT" : "SERVICE_NOT_FOUND",
+        code:
+          serviceRes?.error?.code === "DB_TIMEOUT"
+            ? "DB_TIMEOUT"
+            : "SERVICE_NOT_FOUND",
         message: "サービスが見つかりません",
       },
     } as const;
@@ -218,9 +224,15 @@ export async function createPendingReservation(input: CreateReservationInput): P
 
   const reservationCode = buildReservationCode(startUtc);
 
-  const initialStatus: ReservationRow["status"] = service.requires_prepayment
+  // 支払い方法に応じてステータスとTTLを決定
+  const isPrepay = paymentOption === "prepay";
+  const initialStatus: ReservationRow["status"] = isPrepay
     ? "pending"
-    : "unpaid";
+    : "confirmed";
+  const now = new Date();
+  const pendingExpiresAt = isPrepay
+    ? new Date(now.getTime() + PENDING_TTL_MINUTES * 60_000).toISOString()
+    : null;
 
   console.log("[reservations] insert start");
   const { data, error } = await withTimeout(
@@ -237,6 +249,7 @@ export async function createPendingReservation(input: CreateReservationInput): P
         start_at: startUtc.toISOString(),
         end_at: endUtc.toISOString(),
         status: initialStatus,
+        pending_expires_at: pendingExpiresAt,
         amount_total_jpy: service.price_jpy,
         locale: locale ?? "ja",
         notes: notes ?? null,
@@ -266,11 +279,11 @@ export async function createPendingReservation(input: CreateReservationInput): P
     throw error;
   }
 
-  // 事前決済不要の場合は作成時点で確認メールを送信する
+  // 店舗払い（confirmed）なら作成時点で確認メールを送信する
   try {
-    if (initialStatus === "unpaid" && data?.id) {
+    if (initialStatus === "confirmed" && data?.id) {
       await sendReservationConfirmationEmail(data.id);
-      recordEvent("reservation.created.unpaid", {
+      recordEvent("reservation.created.confirmed", {
         reservation_id: data.id,
         code: data.code,
       }).catch(() => {});
@@ -329,7 +342,9 @@ async function hasConflict(
     .select(
       "start_at, end_at, service:service_id(buffer_before_min, buffer_after_min)",
     )
-    .neq("status", "canceled")
+    .or(
+      `status.in.(confirmed,paid),and(status.eq.pending,pending_expires_at.gt.${new Date().toISOString()})`,
+    ) // Include confirmed/paid and active pending
     .gt("end_at", startUtc.toISOString())
     .lt("start_at", endUtc.toISOString());
 
@@ -417,7 +432,8 @@ export async function lookupReservationByCode(
 
   const row = data as ReservationLookupRow;
   const emailMatches =
-    row.customer_email && row.customer_email.toLowerCase() === normalizedContact;
+    row.customer_email &&
+    row.customer_email.toLowerCase() === normalizedContact;
   const phoneMatches =
     row.customer_phone && normalizePhone(row.customer_phone) === sanitizedPhone;
 
@@ -436,7 +452,7 @@ export async function updateReservationContact(
     notes?: string | null;
     locale?: string | null;
   },
-) : Promise<ReservationContactUpdateResult | null> {
+): Promise<ReservationContactUpdateResult | null> {
   const supabase = createSupabaseServiceRoleClient() as any;
   const normalizedEmail = payload.email
     ? payload.email.trim().toLowerCase()
@@ -490,6 +506,69 @@ export async function customerCancelReservation(
     });
   }
   return data;
+}
+
+/**
+ * Cancel all reservations that are still in 'pending' status and have passed their pending_expires_at.
+ * Returns a summary with the number of reservations canceled.
+ */
+export async function cancelExpiredPendingReservations(options?: {
+  referenceDate?: Date;
+}) {
+  const supabase = createSupabaseServiceRoleClient() as any;
+  const nowIso = (options?.referenceDate ?? new Date()).toISOString();
+
+  // Update and select affected rows in a single query
+  const { data, error } = await supabase
+    .from("reservations")
+    .update({
+      status: "canceled",
+      pending_expires_at: null,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("status", "pending")
+    .lte("pending_expires_at", nowIso)
+    .select("id, code, pending_expires_at");
+
+  if (error) throw error;
+
+  const rows = (data ?? []) as Array<
+    Pick<ReservationRow, "id" | "code" | "pending_expires_at">
+  >;
+  for (const row of rows) {
+    try {
+      await recordEvent("reservation.canceled.pending_expired", {
+        reservation_id: row.id,
+        code: row.code,
+        pending_expires_at: row.pending_expires_at,
+      } as any);
+    } catch {}
+  }
+
+  return { canceled: rows.length } as const;
+}
+
+export async function markReservationEmailVerified(reservationId: string) {
+  const supabase = createSupabaseServiceRoleClient() as any;
+  const nowIso = new Date().toISOString();
+  const { data, error } = await supabase
+    .from("reservations")
+    .update({ email_verified_at: nowIso, updated_at: nowIso })
+    .eq("id", reservationId)
+    .select("id, code, email_verified_at")
+    .maybeSingle();
+  if (error) throw error;
+  if (data) {
+    await recordEvent("reservation.email.verified", {
+      reservation_id: data.id,
+      code: (data as any).code,
+      email_verified_at: nowIso,
+    }).catch(() => {});
+  }
+  return data as Pick<
+    ReservationRow,
+    "id" | "code" | "email_verified_at"
+  > | null;
 }
 
 function parseToUtc(value: string) {

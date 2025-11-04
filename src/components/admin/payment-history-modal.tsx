@@ -11,7 +11,10 @@ interface HistoryItem {
   amount_jpy: number | null;
   method: string;
   source: string;
-  details: { stripe_checkout_session: string | null; stripe_payment_intent: string | null };
+  details: {
+    stripe_checkout_session: string | null;
+    stripe_payment_intent: string | null;
+  };
 }
 
 type ReservationRow = Database["public"]["Tables"]["reservations"]["Row"];
@@ -21,7 +24,10 @@ interface Props {
   reservation: ReservationRow;
 }
 
-export default function PaymentHistoryModal({ reservationId, reservation }: Props) {
+export default function PaymentHistoryModal({
+  reservationId,
+  reservation,
+}: Props) {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [items, setItems] = useState<HistoryItem[]>([]);
@@ -33,7 +39,9 @@ export default function PaymentHistoryModal({ reservationId, reservation }: Prop
       setLoading(true);
       setError(null);
       try {
-        const res = await fetch(`/api/admin/payment-history?rid=${reservationId}`);
+        const res = await fetch(
+          `/api/admin/payment-history?rid=${reservationId}`,
+        );
         const data = await res.json();
         if (!res.ok) throw new Error(data?.error ?? "failed");
         setItems((data?.items ?? []) as HistoryItem[]);
@@ -63,11 +71,21 @@ export default function PaymentHistoryModal({ reservationId, reservation }: Prop
 
       {open && (
         <div className="fixed inset-0 z-50 flex items-center justify-center">
-          <div className="absolute inset-0 bg-black/60" onClick={() => setOpen(false)} />
+          <div
+            className="absolute inset-0 bg-black/60"
+            onClick={() => setOpen(false)}
+          />
           <div className="relative z-10 w-[95vw] max-w-lg rounded-lg border border-slate-800 bg-slate-900 p-4 shadow-xl">
             <div className="flex items-center justify-between">
-              <h3 className="text-base font-semibold text-slate-200">入金履歴</h3>
-              <Button variant="ghost" size="sm" onClick={() => setOpen(false)} className="text-slate-300">
+              <h3 className="text-base font-semibold text-slate-200">
+                入金履歴
+              </h3>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setOpen(false)}
+                className="text-slate-300"
+              >
                 閉じる
               </Button>
             </div>
@@ -81,22 +99,34 @@ export default function PaymentHistoryModal({ reservationId, reservation }: Prop
               ) : (
                 <ul className="space-y-2">
                   {items.map((it, idx) => (
-                    <li key={idx} className="rounded border border-slate-800 bg-slate-950/50 p-2">
+                    <li
+                      key={idx}
+                      className="rounded border border-slate-800 bg-slate-950/50 p-2"
+                    >
                       <div className="flex items-center justify-between">
-                        <span className="text-sm text-slate-200">{formatLocal(it.at)}</span>
-                        <span className="text-sm font-semibold text-slate-100">¥{(it.amount_jpy ?? 0).toLocaleString()}</span>
+                        <span className="text-sm text-slate-200">
+                          {formatLocal(it.at)}
+                        </span>
+                        <span className="text-sm font-semibold text-slate-100">
+                          ¥{(it.amount_jpy ?? 0).toLocaleString()}
+                        </span>
                       </div>
                       <div className="text-xs text-slate-400">
                         <span>方法: {labelMethod(it.method)}</span>
                         <span className="ml-2">担当: {it.source}</span>
                       </div>
-                      {it.details?.stripe_payment_intent || it.details?.stripe_checkout_session ? (
+                      {it.details?.stripe_payment_intent ||
+                      it.details?.stripe_checkout_session ? (
                         <div className="mt-1 text-xs text-slate-500">
                           {it.details?.stripe_payment_intent ? (
-                            <span>PI: {mask(it.details.stripe_payment_intent)}</span>
+                            <span>
+                              PI: {mask(it.details.stripe_payment_intent)}
+                            </span>
                           ) : null}
                           {it.details?.stripe_checkout_session ? (
-                            <span className="ml-2">CS: {mask(it.details.stripe_checkout_session)}</span>
+                            <span className="ml-2">
+                              CS: {mask(it.details.stripe_checkout_session)}
+                            </span>
                           ) : null}
                         </div>
                       ) : null}
@@ -108,15 +138,21 @@ export default function PaymentHistoryModal({ reservationId, reservation }: Prop
             <div className="mt-4 space-y-2 border-t border-slate-800 pt-3">
               <div className="flex items-center justify-between">
                 <span className="text-xs text-slate-400">予約合計</span>
-                <span className="text-sm text-slate-100">¥{paymentState.total.toLocaleString()}</span>
+                <span className="text-sm text-slate-100">
+                  ¥{paymentState.total.toLocaleString()}
+                </span>
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-xs text-slate-400">入金済み</span>
-                <span className="text-sm text-slate-100">¥{paymentState.paid.toLocaleString()}</span>
+                <span className="text-sm text-slate-100">
+                  ¥{paymentState.paid.toLocaleString()}
+                </span>
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-xs text-slate-400">残額</span>
-                <span className="text-base font-semibold text-slate-100">¥{paymentState.remaining.toLocaleString()}</span>
+                <span className="text-base font-semibold text-slate-100">
+                  ¥{paymentState.remaining.toLocaleString()}
+                </span>
               </div>
             </div>
           </div>

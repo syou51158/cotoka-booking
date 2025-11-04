@@ -1,11 +1,25 @@
-import { sendMailSMTP } from "@/server/email/smtp";
+import { sendSmtp, isSmtpConfigured } from "@/server/email/smtp";
 import { formatInTimeZone } from "date-fns-tz";
 import { addHours, addMinutes, subMinutes } from "date-fns";
-import { SITE_NAME, SITE_URL, TIMEZONE, SALON_NAME, SALON_ADDRESS, SALON_PHONE, SALON_MAP_URL, CANCEL_POLICY_TEXT } from "@/lib/config";
+import {
+  SITE_NAME,
+  SITE_URL,
+  TIMEZONE,
+  SALON_NAME,
+  SALON_ADDRESS,
+  SALON_PHONE,
+  SALON_MAP_URL,
+  CANCEL_POLICY_TEXT,
+} from "@/lib/config";
 import { createSupabaseServiceRoleClient } from "@/lib/supabase";
 import type { Database } from "@/types/database";
 import { recordEvent } from "./events";
-import { renderConfirmationEmail, renderReminderEmail, renderCancellationEmail } from "@/lib/email-renderer";
+import {
+  renderConfirmationEmail,
+  renderReminderEmail,
+  renderCancellationEmail,
+} from "@/lib/email-renderer";
+import { issueReservationViewToken } from "./tokens";
 import { getBusinessProfile } from "@/server/settings";
 import { getDictionary } from "@/i18n/dictionaries";
 import { checkEmailIdempotency } from "@/lib/idempotency";
@@ -18,19 +32,32 @@ export async function sendEmailWithRetry(
     subject: string;
     text?: string;
     html?: string;
-    attachments?: Array<{ filename: string; content: string; contentType?: string }>;
+    attachments?: Array<{
+      filename: string;
+      content: string;
+      contentType?: string;
+    }>;
     meta?: Record<string, unknown>;
     from?: string;
   },
   maxAttempts = 3,
-): Promise<{ ok: boolean; attempt: number; emailId?: string }> {
+): Promise<{
+  ok: boolean;
+  attempt: number;
+  emailId?: string;
+  provider?: "smtp" | "dry_run";
+}> {
   // Extract ICS from attachments (base64) if present
-  const icsBase64 = params.attachments?.find((a) => (a.contentType ?? "") === "text/calendar")?.content;
-  const ics = icsBase64 ? Buffer.from(icsBase64, "base64").toString("utf-8") : undefined;
+  const icsBase64 = params.attachments?.find(
+    (a) => (a.contentType ?? "") === "text/calendar",
+  )?.content;
+  const ics = icsBase64
+    ? Buffer.from(icsBase64, "base64").toString("utf-8")
+    : undefined;
 
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
     try {
-      const { messageId } = await sendMailSMTP({
+      const { id, provider } = await sendSmtp({
         to: params.to,
         subject: params.subject,
         html: params.html ?? (params.text ? `<pre>${params.text}</pre>` : ""),
@@ -43,21 +70,23 @@ export async function sendEmailWithRetry(
         ...(params.meta ?? {}),
         to: params.to,
         subject: params.subject,
-        provider: "smtp",
+        provider,
         attempt,
-        dry_run: false,
-        messageId,
+        email_id: id,
       });
 
-      return { ok: true, attempt, emailId: messageId };
+      return { ok: true, attempt, emailId: id, provider };
     } catch (error) {
+      const provider_guess: "smtp" | "dry_run" = isSmtpConfigured()
+        ? "smtp"
+        : "dry_run";
       await recordEvent("email_send_failed", {
         ...(params.meta ?? {}),
         to: params.to,
         subject: params.subject,
-        provider: "smtp",
+        provider_guess,
         attempt,
-        error: error instanceof Error ? error.message : String(error),
+        error_message: error instanceof Error ? error.message : String(error),
       });
 
       if (attempt < maxAttempts) {
@@ -82,7 +111,10 @@ type ReservationWithRelations = ReservationRow & {
   > | null;
 };
 
-export async function sendReservationConfirmationEmail(reservationId: string, locale: "ja" | "en" | "zh" = 'ja') {
+export async function sendReservationConfirmationEmail(
+  reservationId: string,
+  locale: "ja" | "en" | "zh" = "ja",
+) {
   const profile = await getBusinessProfile();
   const supabase = createSupabaseServiceRoleClient();
   const { data, error } = await supabase
@@ -100,13 +132,17 @@ export async function sendReservationConfirmationEmail(reservationId: string, lo
   }
 
   // 重複送信防止の冪等性チェック（15分ウィンドウ）
-  const idempotency = await checkEmailIdempotency(reservationId, "confirmation", 15);
+  const idempotency = await checkEmailIdempotency(
+    reservationId,
+    "confirmation",
+    15,
+  );
   if (!idempotency.isAllowed) {
     await recordEvent("reservation.confirmation.skipped_duplicate", {
       reservation_id: reservationId,
       customer_email: joined.customer_email,
       lastSentAt: idempotency.lastSentAt ?? null,
-      reason: idempotency.reason ?? "duplicate"
+      reason: idempotency.reason ?? "duplicate",
     });
     return;
   }
@@ -122,22 +158,66 @@ export async function sendReservationConfirmationEmail(reservationId: string, lo
     code: joined.code,
     notes: joined.notes ?? undefined,
     service: joined.service
-      ? { name: joined.service.name, duration_min: joined.service.duration_min ?? 60 }
+      ? {
+          name: joined.service.name,
+          duration_min: joined.service.duration_min ?? 60,
+        }
       : null,
     staff: joined.staff
-      ? { display_name: joined.staff.display_name, email: joined.staff.email ?? "" }
+      ? {
+          display_name: joined.staff.display_name,
+          email: joined.staff.email ?? "",
+        }
       : null,
   };
 
   // 新しいテンプレートシステムを使用
-  const emailContent = await renderConfirmationEmail(baseReservation, locale);
+  // Magic link を発行（失敗してもメール送信は継続）
+  let viewUrl: string | undefined;
+  try {
+    const { url, jti, expiresAt } = await issueReservationViewToken(
+      reservationId,
+      locale,
+    );
+    viewUrl = url;
+    await (createSupabaseServiceRoleClient() as any)
+      .from("reservations")
+      .update({
+        last_magic_link_jti: jti,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", reservationId);
+    await recordEvent("reservation.magic_link.issued", {
+      reservation_id: reservationId,
+      jti,
+      expires_at: expiresAt.toISOString(),
+      locale,
+    });
+  } catch (error) {
+    await recordEvent("reservation.magic_link.issue_failed", {
+      reservation_id: reservationId,
+      error_message: error instanceof Error ? error.message : String(error),
+      locale,
+    }).catch(() => {});
+  }
+
+  const emailContent = await renderConfirmationEmail(
+    baseReservation,
+    locale,
+    viewUrl,
+  );
 
   const result = await sendEmailWithRetry({
     to: joined.customer_email,
     subject: emailContent.subject,
     html: emailContent.html,
     attachments: emailContent.attachments,
-    meta: { kind: "confirmation", reservation_id: reservationId, code: joined.code, locale },
+    meta: {
+      kind: "confirmation",
+      reservation_id: reservationId,
+      code: joined.code,
+      locale,
+    },
     from: profile.email_from,
   });
 
@@ -204,8 +284,11 @@ export async function processReservationReminders(
       }
 
       // 予約のロケールを取得（デフォルトは日本語）
-      const locale: "ja" | "en" | "zh" = (reservation.locale === 'en' || reservation.locale === 'zh') ? reservation.locale : 'ja';
-      
+      const locale: "ja" | "en" | "zh" =
+        reservation.locale === "en" || reservation.locale === "zh"
+          ? reservation.locale
+          : "ja";
+
       // BaseReservation に正規化して、total_amount を渡す
       const baseReservation = {
         id: reservation.id,
@@ -216,28 +299,41 @@ export async function processReservationReminders(
         status: reservation.status,
         code: reservation.code,
         notes: reservation.notes ?? undefined,
-        service: reservation.service ? { name: reservation.service.name, duration_min: 60 } : null,
-        staff: reservation.staff ? { display_name: reservation.staff.display_name, email: "" } : null,
+        service: reservation.service
+          ? { name: reservation.service.name, duration_min: 60 }
+          : null,
+        staff: reservation.staff
+          ? { display_name: reservation.staff.display_name, email: "" }
+          : null,
       };
-      
+
       // 新しいテンプレートシステムを使用
-      const emailContent = await renderReminderEmail(baseReservation, kind, locale);
+      const emailContent = await renderReminderEmail(
+        baseReservation,
+        kind,
+        locale,
+      );
 
       const result = await sendEmailWithRetry({
         to: reservation.customer_email,
         subject: emailContent.subject,
         html: emailContent.html,
         attachments: emailContent.attachments,
-        meta: { kind: "reminder", hours_before: hours, reservation_id: reservation.id, locale },
+        meta: {
+          kind: "reminder",
+          hours_before: hours,
+          reservation_id: reservation.id,
+          locale,
+        },
         from: profile.email_from,
       });
 
       if (result.ok) {
         await recordEvent("reservation.reminder.sent", {
-        reservation_id: reservation.id,
-        hours_before: hours,
-        customer_email: reservation.customer_email,
-      });
+          reservation_id: reservation.id,
+          hours_before: hours,
+          customer_email: reservation.customer_email,
+        });
       }
 
       await upsertNotificationLog(
@@ -262,7 +358,8 @@ async function hasReminderBeenSent(reservationId: string, kind: ReminderKind) {
     .eq("kind", kind)
     .limit(1);
   if (error) throw error;
-  type NotificationRow = Database["public"]["Tables"]["reservation_notifications"]["Row"];
+  type NotificationRow =
+    Database["public"]["Tables"]["reservation_notifications"]["Row"];
   const rows = (data ?? []) as Pick<NotificationRow, "id" | "sent_at">[];
   if (rows.length === 0) {
     return false;

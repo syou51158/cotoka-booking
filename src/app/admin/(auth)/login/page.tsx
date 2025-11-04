@@ -11,8 +11,20 @@ import { Input } from "@/components/ui/input";
 import { isAdminAuthenticated } from "@/lib/admin-auth";
 import { login } from "./actions";
 
-export default function AdminLoginPage() {
-  if (isAdminAuthenticated()) {
+async function loginAction(formData: FormData) {
+  "use server";
+  const res = await login(formData);
+  if (res && "error" in res) {
+    redirect("/admin/login?error=passcode_invalid");
+  }
+}
+
+export default async function AdminLoginPage({
+  searchParams,
+}: {
+  searchParams?: { error?: string };
+}) {
+  if (await isAdminAuthenticated()) {
     redirect("/admin");
   }
 
@@ -24,7 +36,12 @@ export default function AdminLoginPage() {
           <CardDescription>パスコードを入力してください。</CardDescription>
         </CardHeader>
         <CardContent>
-          <form action={login} className="space-y-4">
+          {searchParams?.error === "passcode_invalid" && (
+            <p className="mb-2 text-sm text-red-500">
+              パスコードが正しくありません。
+            </p>
+          )}
+          <form action={loginAction} className="space-y-4">
             <Input
               name="passcode"
               type="password"

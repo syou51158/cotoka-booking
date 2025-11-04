@@ -1,6 +1,7 @@
 # 変更ファイル一覧
 
 ## 修正されたファイル (Modified)
+
 - README.md
 - next.config.ts
 - package-lock.json
@@ -13,6 +14,7 @@
 - src/server/payments.ts
 
 ## 新規追加されたファイル (New)
+
 - .husky/
 - components.json
 - scripts/
@@ -44,7 +46,7 @@
 - src/i18n/
 - src/instrumentation.ts
 - src/lib/
-- src/server/_dev_mocks/
+- src/server/\_dev_mocks/
 - src/server/admin.ts
 - src/server/events.ts
 - src/server/ics.ts
@@ -60,16 +62,19 @@
 ## 主要な変更内容
 
 ### 予約フローUIの統一
+
 - 日時選択ページ（select）にStickySummaryを追加
 - 確認ページ（confirm）の期間表示を統一（min表記をdurationLabelに）
 - SelectClientコンポーネントから重複するStickySummaryを削除
 - SelectPageClientコンポーネントを新規作成し、選択状態に応じた動的更新を実装
 
 ### リマインダーAPI認証機能
+
 - `/api/cron/reminders`エンドポイントにx-cron-secretヘッダーによる認証機能を実装
 - 正しいシークレットでのアクセス時は200 OK、間違ったシークレットでは401 Unauthorizedを返却
 
 ### その他の機能追加
+
 - 多言語対応（日本語・英語）
 - Stripe決済連携
 - 管理画面機能

@@ -1,5 +1,12 @@
 import Link from "next/link";
-import { addDays, endOfDay, format, startOfDay, startOfWeek, endOfWeek } from "date-fns";
+import {
+  addDays,
+  endOfDay,
+  format,
+  startOfDay,
+  startOfWeek,
+  endOfWeek,
+} from "date-fns";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -14,7 +21,7 @@ import {
 import Toaster from "@/components/ui/toaster";
 import SettlePaymentForm from "@/components/admin/settle-payment-form";
 import PaymentHistoryModal from "@/components/admin/payment-history-modal";
-import { EmailHistoryModal } from "@/components/admin/email-history-modal";
+import EmailHistoryModal from "@/components/admin/email-history-modal";
 import { ResendEmailButton } from "@/components/admin/resend-email-button";
 import { env } from "@/lib/env";
 import { computePaymentState } from "@/lib/payments";
@@ -87,41 +94,42 @@ export default async function AdminDashboard({
   const range = RANGE_OPTIONS[rangeKey];
   const { from, to } = range.resolve();
 
-  const [reservations, staff, services, todayReservations, weekReservations] = await Promise.all([
-    getAdminReservations({
-      from: from.toISOString(),
-      to: to.toISOString(),
-      staffId: staffParam !== "all" ? staffParam : undefined,
-      serviceId: serviceParam !== "all" ? serviceParam : undefined,
-      status: statusParam !== "all" ? statusFilter : undefined,
-    }),
-    getStaffDirectory(),
-    getActiveServices(),
-    // 今日のサマリー用
-    (async () => {
-      const t = RANGE_OPTIONS.today.resolve();
-      return getAdminReservations({
-        from: t.from.toISOString(),
-        to: t.to.toISOString(),
+  const [reservations, staff, services, todayReservations, weekReservations] =
+    await Promise.all([
+      getAdminReservations({
+        from: from.toISOString(),
+        to: to.toISOString(),
         staffId: staffParam !== "all" ? staffParam : undefined,
         serviceId: serviceParam !== "all" ? serviceParam : undefined,
         status: statusParam !== "all" ? statusFilter : undefined,
-      });
-    })(),
-    // 今週のサマリー用（週の開始は月曜）
-    (async () => {
-      const now = new Date();
-      const wFrom = startOfWeek(now, { weekStartsOn: 1 });
-      const wTo = endOfWeek(now, { weekStartsOn: 1 });
-      return getAdminReservations({
-        from: wFrom.toISOString(),
-        to: wTo.toISOString(),
-        staffId: staffParam !== "all" ? staffParam : undefined,
-        serviceId: serviceParam !== "all" ? serviceParam : undefined,
-        status: statusParam !== "all" ? statusFilter : undefined,
-      });
-    })(),
-  ]);
+      }),
+      getStaffDirectory(),
+      getActiveServices(),
+      // 今日のサマリー用
+      (async () => {
+        const t = RANGE_OPTIONS.today.resolve();
+        return getAdminReservations({
+          from: t.from.toISOString(),
+          to: t.to.toISOString(),
+          staffId: staffParam !== "all" ? staffParam : undefined,
+          serviceId: serviceParam !== "all" ? serviceParam : undefined,
+          status: statusParam !== "all" ? statusFilter : undefined,
+        });
+      })(),
+      // 今週のサマリー用（週の開始は月曜）
+      (async () => {
+        const now = new Date();
+        const wFrom = startOfWeek(now, { weekStartsOn: 1 });
+        const wTo = endOfWeek(now, { weekStartsOn: 1 });
+        return getAdminReservations({
+          from: wFrom.toISOString(),
+          to: wTo.toISOString(),
+          staffId: staffParam !== "all" ? staffParam : undefined,
+          serviceId: serviceParam !== "all" ? serviceParam : undefined,
+          status: statusParam !== "all" ? statusFilter : undefined,
+        });
+      })(),
+    ]);
 
   // SSOT: computePaymentStateを使用した支払い状態計算
   const filteredReservations = reservations.filter((r) => {
@@ -137,7 +145,10 @@ export default async function AdminDashboard({
   // サマリー集計（SSOT）
   const summarize = (items: typeof reservations) => {
     const count = items.length;
-    const paidTotal = items.reduce((sum, r) => sum + computePaymentState(r).paid, 0);
+    const paidTotal = items.reduce(
+      (sum, r) => sum + computePaymentState(r).paid,
+      0,
+    );
     return { count, paidTotal };
   };
   const todaySummary = summarize(todayReservations);
@@ -168,31 +179,43 @@ export default async function AdminDashboard({
       <div className="grid gap-4 sm:grid-cols-2">
         <Card className="border-slate-800 bg-slate-900/40">
           <CardHeader>
-            <CardTitle className="text-base text-slate-200">今日のサマリー</CardTitle>
+            <CardTitle className="text-base text-slate-200">
+              今日のサマリー
+            </CardTitle>
           </CardHeader>
           <CardContent className="space-y-2 text-sm text-slate-300">
             <div className="flex items-center justify-between">
               <span>予約件数</span>
-              <span className="font-semibold text-slate-100">{todaySummary.count}件</span>
+              <span className="font-semibold text-slate-100">
+                {todaySummary.count}件
+              </span>
             </div>
             <div className="flex items-center justify-between">
               <span>売上（入金済）</span>
-              <span className="font-semibold text-slate-100">¥{todaySummary.paidTotal.toLocaleString()}</span>
+              <span className="font-semibold text-slate-100">
+                ¥{todaySummary.paidTotal.toLocaleString()}
+              </span>
             </div>
           </CardContent>
         </Card>
         <Card className="border-slate-800 bg-slate-900/40">
           <CardHeader>
-            <CardTitle className="text-base text-slate-200">今週のサマリー</CardTitle>
+            <CardTitle className="text-base text-slate-200">
+              今週のサマリー
+            </CardTitle>
           </CardHeader>
           <CardContent className="space-y-2 text-sm text-slate-300">
             <div className="flex items-center justify-between">
               <span>予約件数</span>
-              <span className="font-semibold text-slate-100">{weekSummary.count}件</span>
+              <span className="font-semibold text-slate-100">
+                {weekSummary.count}件
+              </span>
             </div>
             <div className="flex items-center justify-between">
               <span>売上（入金済）</span>
-              <span className="font-semibold text-slate-100">¥{weekSummary.paidTotal.toLocaleString()}</span>
+              <span className="font-semibold text-slate-100">
+                ¥{weekSummary.paidTotal.toLocaleString()}
+              </span>
             </div>
           </CardContent>
         </Card>
@@ -351,42 +374,65 @@ export default async function AdminDashboard({
                           variant="secondary"
                           className="bg-slate-800 text-slate-200"
                         >
-                          {STATUS_LABEL[reservation.status] ?? reservation.status}
+                          {STATUS_LABEL[reservation.status] ??
+                            reservation.status}
                         </Badge>
+                        {reservation.status === "pending" &&
+                        reservation.pending_expires_at ? (
+                          <Badge className="bg-amber-700/70 text-amber-100">
+                            期限{" "}
+                            {format(
+                              new Date(reservation.pending_expires_at),
+                              "HH:mm",
+                            )}
+                          </Badge>
+                        ) : null}
                         {/* 入金ステータスバッジ（SSOT） */}
                         {(() => {
                           const state = computePaymentState(reservation);
                           if (state.statusTag === "canceled") {
                             return (
-                              <Badge className="bg-slate-700/60 text-slate-300">キャンセル</Badge>
+                              <Badge className="bg-slate-700/60 text-slate-300">
+                                キャンセル
+                              </Badge>
                             );
                           }
                           if (state.statusTag === "unpaid") {
                             return (
-                              <Badge className="bg-amber-700/60 text-amber-100">未収</Badge>
+                              <Badge className="bg-amber-700/60 text-amber-100">
+                                未収
+                              </Badge>
                             );
                           }
                           if (state.statusTag === "partial") {
                             return (
-                              <Badge className="bg-blue-700/60 text-blue-100">一部入金</Badge>
+                              <Badge className="bg-blue-700/60 text-blue-100">
+                                一部入金
+                              </Badge>
                             );
                           }
                           if (state.statusTag === "paid") {
                             return (
-                              <Badge className="bg-emerald-700/70 text-emerald-100">支払い済み</Badge>
+                              <Badge className="bg-emerald-700/70 text-emerald-100">
+                                支払い済み
+                              </Badge>
                             );
                           }
                           return null;
                         })()}
                         {/* DEV-only: SSOTミニテキスト */}
-                        {env.ALLOW_DEV_MOCKS === "true" && env.NEXT_PUBLIC_ALLOW_DEV_MOCKS === "true" ? (
-                          (() => {
-                            const state = computePaymentState(reservation);
-                            return (
-                              <span className="text-[10px] text-slate-400">{state.statusTag} / paid={state.paid} / remain={state.remaining}</span>
-                            );
-                          })()
-                        ) : null}
+                        {env.ALLOW_DEV_MOCKS === "true" &&
+                        env.NEXT_PUBLIC_ALLOW_DEV_MOCKS === "true"
+                          ? (() => {
+                              const state = computePaymentState(reservation);
+                              return (
+                                <span className="text-[10px] text-slate-400">
+                                  {state.statusTag} / paid={state.paid} /
+                                  remain={state.remaining}
+                                </span>
+                              );
+                            })()
+                          : null}
                       </div>
                       <p className="text-sm text-slate-400">
                         {format(
@@ -408,7 +454,10 @@ export default async function AdminDashboard({
                       </span>
                       {/* 残額列（SSOT） */}
                       <span className="rounded border border-slate-800 px-3 py-1 text-xs text-slate-300">
-                        残額 ¥{computePaymentState(reservation).remaining.toLocaleString()}
+                        残額 ¥
+                        {computePaymentState(
+                          reservation,
+                        ).remaining.toLocaleString()}
                       </span>
                       <span className="rounded border border-slate-800 px-3 py-1 text-xs text-slate-300">
                         クリックで詳細
@@ -431,6 +480,16 @@ export default async function AdminDashboard({
                           {STATUS_LABEL[reservation.status] ??
                             reservation.status}
                         </p>
+                        {reservation.status === "pending" &&
+                        reservation.pending_expires_at ? (
+                          <p className="text-xs text-amber-300">
+                            支払い期限:{" "}
+                            {format(
+                              new Date(reservation.pending_expires_at),
+                              "yyyy/MM/dd HH:mm",
+                            )}
+                          </p>
+                        ) : null}
                       </div>
                     </div>
 
@@ -465,25 +524,32 @@ export default async function AdminDashboard({
                         >
                           メモを保存
                         </Button>
-                        <PaymentHistoryModal reservationId={reservation.id} reservation={reservation} />
+                        <PaymentHistoryModal
+                          reservationId={reservation.id}
+                          reservation={reservation}
+                        />
                         <EmailHistoryModal reservationId={reservation.id} />
-                        <ResendEmailButton 
-                          reservationId={reservation.id} 
-                          customerEmail={reservation.customer_email} 
+                        <ResendEmailButton
+                          reservationId={reservation.id}
+                          customerEmail={reservation.customer_email ?? ""}
                         />
                       </div>
                     </form>
 
                     {(() => {
                       const state = computePaymentState(reservation);
-                      const canSettle = reservation.status !== "canceled" && state.remaining > 0;
+                      const canSettle =
+                        reservation.status !== "canceled" &&
+                        state.remaining > 0;
                       if (!canSettle) return null;
 
                       return (
                         <SettlePaymentForm
                           reservationId={reservation.id}
                           remaining={state.remaining}
-                          paymentOption={(reservation as any).payment_option ?? null}
+                          paymentOption={
+                            (reservation as any).payment_option ?? null
+                          }
                         />
                       );
                     })()}

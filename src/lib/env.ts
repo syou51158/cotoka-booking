@@ -21,6 +21,9 @@ const EnvSchema = z.object({
   // Email provider
   RESEND_API_KEY: z.string().optional(),
   NOTIFY_FROM_EMAIL: z.string().optional(),
+  // Magic link / JWT
+  JWT_SECRET: z.string().optional(),
+  MAGIC_LINK_VIEW_TTL_MINUTES: z.string().optional(),
   // Sentry
   SENTRY_DSN: z.string().optional(),
   SENTRY_ENVIRONMENT: z.string().optional(),
@@ -58,6 +61,8 @@ const parsed = EnvSchema.safeParse({
   NEXT_PUBLIC_ALLOW_DEV_MOCKS: process.env.NEXT_PUBLIC_ALLOW_DEV_MOCKS,
   RESEND_API_KEY: process.env.RESEND_API_KEY,
   NOTIFY_FROM_EMAIL: process.env.NOTIFY_FROM_EMAIL,
+  JWT_SECRET: process.env.JWT_SECRET,
+  MAGIC_LINK_VIEW_TTL_MINUTES: process.env.MAGIC_LINK_VIEW_TTL_MINUTES,
   SENTRY_DSN: process.env.SENTRY_DSN,
   SENTRY_ENVIRONMENT: process.env.SENTRY_ENVIRONMENT,
 });
@@ -77,14 +82,19 @@ export const env = parsed.success
       SUPABASE_URL:
         process.env.SUPABASE_URL ?? process.env.NEXT_PUBLIC_SUPABASE_URL ?? "",
       SUPABASE_ANON_KEY:
-        process.env.SUPABASE_ANON_KEY ?? process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "",
+        process.env.SUPABASE_ANON_KEY ??
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ??
+        "",
       SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY,
-      NEXT_PUBLIC_DEFAULT_LOCALE: process.env.NEXT_PUBLIC_DEFAULT_LOCALE ?? "ja",
+      NEXT_PUBLIC_DEFAULT_LOCALE:
+        process.env.NEXT_PUBLIC_DEFAULT_LOCALE ?? "ja",
       NEXT_PUBLIC_TIMEZONE: process.env.NEXT_PUBLIC_TIMEZONE ?? "Asia/Tokyo",
       ALLOW_DEV_MOCKS: process.env.ALLOW_DEV_MOCKS,
       NEXT_PUBLIC_ALLOW_DEV_MOCKS: process.env.NEXT_PUBLIC_ALLOW_DEV_MOCKS,
       RESEND_API_KEY: process.env.RESEND_API_KEY,
       NOTIFY_FROM_EMAIL: process.env.NOTIFY_FROM_EMAIL,
+      JWT_SECRET: process.env.JWT_SECRET,
+      MAGIC_LINK_VIEW_TTL_MINUTES: process.env.MAGIC_LINK_VIEW_TTL_MINUTES,
       SENTRY_DSN: process.env.SENTRY_DSN,
       SENTRY_ENVIRONMENT: process.env.SENTRY_ENVIRONMENT,
     };
@@ -110,12 +120,25 @@ export function getEnvHealth() {
   return {
     projectRef: mask(currentProjectRef),
     siteUrl: mask(env.SITE_URL),
-    haveAnonKey: Boolean(env.SUPABASE_ANON_KEY && env.SUPABASE_ANON_KEY.length > 0),
-    haveServiceRole: Boolean(env.SUPABASE_SERVICE_ROLE_KEY && env.SUPABASE_SERVICE_ROLE_KEY.length! > 0),
+    haveAnonKey: Boolean(
+      env.SUPABASE_ANON_KEY && env.SUPABASE_ANON_KEY.length > 0,
+    ),
+    haveServiceRole: Boolean(
+      env.SUPABASE_SERVICE_ROLE_KEY &&
+        env.SUPABASE_SERVICE_ROLE_KEY.length! > 0,
+    ),
     devMocks:
-      env.ALLOW_DEV_MOCKS === "true" && env.NEXT_PUBLIC_ALLOW_DEV_MOCKS === "true",
+      env.ALLOW_DEV_MOCKS === "true" &&
+      env.NEXT_PUBLIC_ALLOW_DEV_MOCKS === "true",
     emailFromMasked: mask(env.NOTIFY_FROM_EMAIL),
-    haveResendKey: Boolean(env.RESEND_API_KEY && env.RESEND_API_KEY.length! > 0),
+    haveResendKey: Boolean(
+      env.RESEND_API_KEY && env.RESEND_API_KEY.length! > 0,
+    ),
+    haveJwtSecret: Boolean(env.JWT_SECRET && env.JWT_SECRET.length! > 0),
+    magicLinkTtlMin:
+      (env.MAGIC_LINK_VIEW_TTL_MINUTES &&
+        Number(env.MAGIC_LINK_VIEW_TTL_MINUTES)) ||
+      null,
     sentryEnv: env.SENTRY_ENVIRONMENT ?? null,
     haveSentryDsn: Boolean(env.SENTRY_DSN && env.SENTRY_DSN.length! > 0),
   } as const;

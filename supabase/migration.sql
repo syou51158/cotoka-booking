@@ -343,3 +343,17 @@ create table if not exists reservation_notifications (
   unique (reservation_id, kind)
 );
 
+-- Pending TTL support for prepayment reservations
+alter table public.reservations
+  add column if not exists pending_expires_at timestamptz;
+
+-- Index to efficiently find expired pendings
+create index if not exists reservations_pending_expires_idx
+  on public.reservations (status, pending_expires_at);
+
+-- Magic link tracking columns
+alter table public.reservations
+  add column if not exists last_magic_link_jti text;
+alter table public.reservations
+  add column if not exists email_verified_at timestamptz;
+

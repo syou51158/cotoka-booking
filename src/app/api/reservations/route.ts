@@ -90,7 +90,10 @@ export async function POST(request: Request) {
 
     if (parsed.paymentOption === "pay_in_store") {
       console.log("[reservations] pay_in_store flow");
-      await markReservationPaid(data!.id, { status: "confirmed", payment_option: "pay_in_store" } as any);
+      await markReservationPaid(data!.id, {
+        status: "confirmed",
+        payment_option: "pay_in_store",
+      } as any);
       try {
         await sendReservationConfirmationEmail(data!.id);
         await recordEvent("reservation.confirmed.pay_in_store", {
@@ -101,11 +104,55 @@ export async function POST(request: Request) {
       }
       const locale = parsed.locale ?? "ja";
       const nextUrl = `/${locale}/success?rid=${encodeURIComponent(data!.id)}`;
-      const res = NextResponse.json({ rid: data!.id, id: data!.id, code: data!.code, nextUrl }, { status: 200 });
+      const res = NextResponse.json(
+        {
+          rid: data!.id,
+          id: data!.id,
+          reservationId: data!.id,
+          code: data!.code,
+          pendingExpiresAt: data!.pending_expires_at,
+          nextUrl,
+        },
+        { status: 200 },
+      );
       res.headers.set("X-Base-Url", base);
       return res;
     }
 
+    // 前払いの場合のメール検証ゲート
+    const requiresVerification =
+      parsed.paymentOption === "prepay" &&
+      !!data.customer_email &&
+      !data.customer_phone &&
+      !(data as any).email_verified_at;
+
+    if (requiresVerification) {
+      try {
+        await sendReservationConfirmationEmail(
+          data.id,
+          (parsed.locale as any) ?? "ja",
+        );
+      } catch (e) {
+        console.warn("Failed to dispatch verification email", e);
+      }
+      const res = NextResponse.json(
+        {
+          rid: data.id,
+          id: data.id,
+          reservationId: data.id,
+          code: data.code,
+          pendingExpiresAt: data.pending_expires_at,
+          verificationRequired: true,
+          message:
+            "メールアドレスの確認が必要です。メール内のリンクを開いてからお支払いにお進みください。",
+        },
+        { status: 200 },
+      );
+      res.headers.set("X-Base-Url", base);
+      return res;
+    }
+
+    // 検証不要（電話あり・または既に検証済み）の場合はそのままチェックアウト作成
     try {
       console.log("[reservations] stripe checkout create start");
       const checkout = await createCheckoutSessionForReservation(
@@ -122,7 +169,15 @@ export async function POST(request: Request) {
         return res;
       }
       const res = NextResponse.json(
-        { rid: data.id, id: data.id, code: data.code, checkoutUrl: checkout.data.url, checkoutSessionId: checkout.data.id },
+        {
+          rid: data.id,
+          id: data.id,
+          reservationId: data.id,
+          code: data.code,
+          pendingExpiresAt: data.pending_expires_at,
+          checkoutUrl: checkout.data.url,
+          checkoutSessionId: checkout.data.id,
+        },
         { status: 200 },
       );
       res.headers.set("X-Base-Url", base);

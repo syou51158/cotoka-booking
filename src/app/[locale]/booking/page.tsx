@@ -50,7 +50,8 @@ export default async function BookingIndexPage({ params }: Props) {
   const dict = getDictionary(locale);
 
   // 名前の文字種で日本語/英語を判定（カテゴリ列が無い前提）
-  const isJapaneseName = (name: string) => /[\u3040-\u30FF\u4E00-\u9FFF]/.test(name);
+  const isJapaneseName = (name: string) =>
+    /[\u3040-\u30FF\u4E00-\u9FFF]/.test(name);
   const jpServices = services.filter((s) => isJapaneseName(s.name));
   const intlServices = services.filter((s) => !isJapaneseName(s.name));
 
@@ -59,11 +60,21 @@ export default async function BookingIndexPage({ params }: Props) {
   if (jpServices.length === 0 && intlServices.length === 0) {
     sections.push({ items: services });
   } else if (locale === "en") {
-    if (intlServices.length > 0) sections.push({ title: dict.services.intlSectionTitle, items: intlServices });
-    if (jpServices.length > 0) sections.push({ title: dict.services.jpSectionTitle, items: jpServices });
+    if (intlServices.length > 0)
+      sections.push({
+        title: dict.services.intlSectionTitle,
+        items: intlServices,
+      });
+    if (jpServices.length > 0)
+      sections.push({ title: dict.services.jpSectionTitle, items: jpServices });
   } else {
-    if (jpServices.length > 0) sections.push({ title: dict.services.jpSectionTitle, items: jpServices });
-    if (intlServices.length > 0) sections.push({ title: dict.services.intlSectionTitle, items: intlServices });
+    if (jpServices.length > 0)
+      sections.push({ title: dict.services.jpSectionTitle, items: jpServices });
+    if (intlServices.length > 0)
+      sections.push({
+        title: dict.services.intlSectionTitle,
+        items: intlServices,
+      });
   }
 
   return (
@@ -80,9 +91,12 @@ export default async function BookingIndexPage({ params }: Props) {
       <Card className="border-slate-200 bg-white rounded-2xl shadow-md">
         <CardContent className="flex flex-col gap-4 py-6 text-sm text-slate-600 sm:flex-row sm:items-center sm:justify-between">
           <div className="max-w-lg space-y-1">
-            <p className="text-sm font-semibold text-[var(--ink)]">アクセス &amp; 口コミ</p>
+            <p className="text-sm font-semibold text-[var(--ink)]">
+              アクセス &amp; 口コミ
+            </p>
             <p>
-              Google マップで店舗位置を確認し、最新のクチコミをご覧いただけます。
+              Google
+              マップで店舗位置を確認し、最新のクチコミをご覧いただけます。
             </p>
           </div>
           <div className="flex flex-col gap-2 sm:flex-row">
@@ -101,7 +115,11 @@ export default async function BookingIndexPage({ params }: Props) {
       </Card>
 
       {sections.map((section, idx) => (
-        <section key={idx} className="space-y-4" aria-label={section.title ?? dict.services.title}>
+        <section
+          key={idx}
+          className="space-y-4"
+          aria-label={section.title ?? dict.services.title}
+        >
           {section.title && (
             <h2 className="text-xl md:text-2xl font-semibold text-[var(--ink)]">
               {section.title}
@@ -109,11 +127,18 @@ export default async function BookingIndexPage({ params }: Props) {
           )}
           <div id="services" className="grid gap-6 sm:grid-cols-2">
             {section.items.map((service) => (
-              <ServiceCard key={service.id} locale={locale} dict={dict} service={service} />
+              <ServiceCard
+                key={service.id}
+                locale={locale}
+                dict={dict}
+                service={service}
+              />
             ))}
           </div>
         </section>
       ))}
+
+      {/* 予約確認ページへの小リンクはヘッダー常設に移動したため削除 */}
     </div>
   );
 }

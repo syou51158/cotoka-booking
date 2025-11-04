@@ -1,13 +1,19 @@
 import { NextResponse } from "next/server";
 import { format } from "date-fns";
-import { requireAdmin } from "@/lib/admin-auth";
+import { verifyAdminAuth } from "@/lib/admin-auth";
 import { getAdminReservations } from "@/server/admin";
 import { computePaymentState } from "@/lib/payments";
 
 export const runtime = "nodejs";
 
 export async function GET(request: Request) {
-  requireAdmin();
+  const auth = await verifyAdminAuth(request);
+  if (!auth.success) {
+    return NextResponse.json(
+      { error: auth.error ?? "Unauthorized" },
+      { status: 401 },
+    );
+  }
   const url = new URL(request.url);
   const from = url.searchParams.get("from");
   const to = url.searchParams.get("to");
@@ -20,7 +26,8 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "from/to is required" }, { status: 400 });
   }
 
-  const status = statusParam && statusParam !== "all" ? (statusParam as any) : undefined;
+  const status =
+    statusParam && statusParam !== "all" ? (statusParam as any) : undefined;
 
   try {
     const items = await getAdminReservations({
@@ -69,10 +76,10 @@ export async function GET(request: Request) {
       state === "paid"
         ? "支払い済み"
         : state === "partial"
-        ? "一部入金"
-        : state === "canceled"
-        ? "キャンセル"
-        : "未収";
+          ? "一部入金"
+          : state === "canceled"
+            ? "キャンセル"
+            : "未収";
 
     const rows = filtered.map((r) => {
       const start = format(new Date(r.start_at), "yyyy/MM/dd HH:mm");
@@ -93,7 +100,9 @@ export async function GET(request: Request) {
         state.paid,
         state.remaining,
         stateJp(state.statusTag),
-      ].map(escape).join(",");
+      ]
+        .map(escape)
+        .join(",");
     });
 
     const csvBody = [header.join(","), ...rows].join("\n");
@@ -107,7 +116,8 @@ export async function GET(request: Request) {
       },
     });
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Internal Server Error";
+    const message =
+      error instanceof Error ? error.message : "Internal Server Error";
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }

@@ -31,9 +31,21 @@ function toNumberSafe(v: unknown): number {
   return 0;
 }
 
-function methodLabelFromEvent(type: string, payload: any): PaymentMethodLiteral | undefined {
-  const raw = typeof payload?.payment_method === "string" ? payload.payment_method : undefined;
-  if (raw === "cash" || raw === "card" || raw === "card_online" || raw === "other") return raw;
+function methodLabelFromEvent(
+  type: string,
+  payload: any,
+): PaymentMethodLiteral | undefined {
+  const raw =
+    typeof payload?.payment_method === "string"
+      ? payload.payment_method
+      : undefined;
+  if (
+    raw === "cash" ||
+    raw === "card" ||
+    raw === "card_online" ||
+    raw === "other"
+  )
+    return raw;
   // 既存イベントの慣習に合わせたフォールバック
   if (type === "reservation_paid") return "card_online";
   if (type === "reservation_settled") return undefined; // 管理画面からの記録で method が入る想定
@@ -58,12 +70,16 @@ export async function getPaymentSummaries(
   if (resErr) throw resErr;
 
   const amountById = new Map<string, number>();
-  for (const r of (reservations ?? []) as Array<Pick<ReservationRow, "id" | "amount_total_jpy">>) {
+  for (const r of (reservations ?? []) as Array<
+    Pick<ReservationRow, "id" | "amount_total_jpy">
+  >) {
     amountById.set(r.id, toNumberSafe((r as any).amount_total_jpy));
   }
 
   // 対象IDのイベントのみをまとめて取得（JSONフィールドに対する OR フィルタ）
-  const orFilter = reservationIds.map((id) => `payload->>reservation_id.eq.${id}`).join(",");
+  const orFilter = reservationIds
+    .map((id) => `payload->>reservation_id.eq.${id}`)
+    .join(",");
   const { data: events, error: evErr } = await supabase
     .from("events")
     .select("type, payload, created_at")
@@ -73,8 +89,15 @@ export async function getPaymentSummaries(
   if (evErr) throw evErr;
 
   // 予約IDごとにイベントをグループ化
-  const eventsById = new Map<string, Array<{ type: string; payload: any; created_at: string }>>();
-  for (const row of (events ?? []) as Array<{ type: string; payload: any; created_at: string }>) {
+  const eventsById = new Map<
+    string,
+    Array<{ type: string; payload: any; created_at: string }>
+  >();
+  for (const row of (events ?? []) as Array<{
+    type: string;
+    payload: any;
+    created_at: string;
+  }>) {
     const rid = (row?.payload as any)?.reservation_id;
     if (!rid || typeof rid !== "string") continue;
     const list = eventsById.get(rid) ?? [];
@@ -88,27 +111,38 @@ export async function getPaymentSummaries(
     const amountTotal = toNumberSafe(amountById.get(rid) ?? 0);
     const evs = (eventsById.get(rid) ?? []).slice();
     // 日時順（古→新）に並べ替え
-    evs.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+    evs.sort(
+      (a, b) =>
+        new Date(a.created_at).getTime() - new Date(b.created_at).getTime(),
+    );
 
     const sources: PaymentSummary["sources"] = evs.map((row) => {
       const p = row.payload as any;
       const amount = toNumberSafe(p?.applied_amount_jpy ?? p?.paid_amount_jpy);
-      const at = (typeof p?.payment_collected_at === "string" && p.payment_collected_at.length > 0)
-        ? p.payment_collected_at
-        : row.created_at;
+      const at =
+        typeof p?.payment_collected_at === "string" &&
+        p.payment_collected_at.length > 0
+          ? p.payment_collected_at
+          : row.created_at;
       const method = methodLabelFromEvent(row.type, p);
       return {
-        type: (row.type === "reservation_settled" ? "reservation_settled" : "reservation_paid"),
+        type:
+          row.type === "reservation_settled"
+            ? "reservation_settled"
+            : "reservation_paid",
         amount,
         method,
         at,
       };
     });
 
-    const paidTotal = sources.reduce((sum, s) => sum + (Number.isFinite(s.amount) ? s.amount : 0), 0);
+    const paidTotal = sources.reduce(
+      (sum, s) => sum + (Number.isFinite(s.amount) ? s.amount : 0),
+      0,
+    );
     const remaining = Math.max(0, amountTotal - paidTotal);
 
-    let paymentState: PaymentSummary["paymentState"]; 
+    let paymentState: PaymentSummary["paymentState"];
     if (remaining === 0 && amountTotal > 0) {
       paymentState = "paid";
     } else if (paidTotal > 0 && remaining > 0) {
@@ -134,7 +168,9 @@ export async function getPaymentSummaries(
   return result;
 }
 
-export async function getPaymentSummary(reservationId: string): Promise<PaymentSummary> {
+export async function getPaymentSummary(
+  reservationId: string,
+): Promise<PaymentSummary> {
   const summaries = await getPaymentSummaries([reservationId]);
   const base = summaries[reservationId];
   return (

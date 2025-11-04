@@ -11,7 +11,11 @@ interface SummaryProps {
   ctaHref?: string;
   disabled?: boolean;
   extraRows?: { label: string; value: string }[];
-  durationNote?: { treatmentMin: number; bufferBeforeMin?: number; bufferAfterMin?: number };
+  durationNote?: {
+    treatmentMin: number;
+    bufferBeforeMin?: number;
+    bufferAfterMin?: number;
+  };
 }
 
 export default function StickySummary({
@@ -30,8 +34,6 @@ export default function StickySummary({
     currency: "JPY",
     maximumFractionDigits: 0,
   }).format(priceJpy);
-
-  const totalBuffer = (durationNote?.bufferBeforeMin ?? 0) + (durationNote?.bufferAfterMin ?? 0);
 
   return (
     <Card className="h-fit rounded-2xl border-slate-200 bg-white shadow-md">
@@ -57,20 +59,11 @@ export default function StickySummary({
         ))}
         <div>
           <div className="text-xs uppercase tracking-wide text-slate-400">
-            {dict.booking.summary.duration ?? dict.booking.summary.time}
+            {dict.services.duration ?? dict.booking.summary.duration}
           </div>
-          <div className="font-medium text-[var(--ink)]">{durationLabel ?? "-"}</div>
-          {durationNote ? (
-            <div className="mt-1 text-xs text-slate-500">
-              {(dict.booking.summary.durationBreakdownTitle ?? "所要時間の内訳") + 
-                ": "}
-              {(dict.booking.summary.treatment ?? "施術") + 
-                ` ${durationNote.treatmentMin}分`}
-              {" / "}
-              {(dict.booking.summary.buffer ?? "バッファ") + 
-                ` ${totalBuffer}分`}
-            </div>
-          ) : null}
+          <div className="font-medium text-[var(--ink)]">
+            {durationLabel ?? "-"}
+          </div>
         </div>
         <div aria-live="polite">
           <div className="text-xs uppercase tracking-wide text-slate-400">
@@ -89,7 +82,9 @@ export default function StickySummary({
             className="w-full bg-[var(--primary)] text-[var(--primary-foreground)] hover:brightness-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--primary)] focus-visible:ring-offset-2"
             disabled={disabled}
           >
-            <a href={ctaHref ?? "#"} aria-label={ctaLabel}>{ctaLabel}</a>
+            <a href={ctaHref ?? "#"} aria-label={ctaLabel}>
+              {ctaLabel}
+            </a>
           </Button>
         ) : null}
       </CardContent>

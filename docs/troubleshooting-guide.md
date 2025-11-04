@@ -18,12 +18,14 @@ Cotoka Bookingアプリケーションで発生する可能性のある問題と
 ### 1.1 メールが送信されない
 
 #### 症状
+
 - メール送信APIが失敗する
 - エラーログに配信エラーが記録される
 
 #### 考えられる原因と解決方法
 
 **原因1: Resend APIキーの問題**
+
 ```bash
 # 確認方法
 curl -X GET 'https://api.resend.com/domains' \
@@ -36,6 +38,7 @@ curl -X GET 'https://api.resend.com/domains' \
 ```
 
 **原因2: ドメイン認証の問題**
+
 ```bash
 # DNS設定の確認
 dig TXT yourdomain.com | grep spf
@@ -48,6 +51,7 @@ dig CNAME resend._domainkey.yourdomain.com
 ```
 
 **原因3: レート制限**
+
 ```javascript
 // ログで確認
 console.log('Rate limit status:', rateLimitResult);
@@ -61,10 +65,13 @@ console.log('Rate limit status:', rateLimitResult);
 ### 1.2 メールが迷惑メールフォルダに入る
 
 #### 症状
+
 - メールは送信されるが、受信者の迷惑メールフォルダに分類される
 
 #### 解決方法
+
 1. **DKIM/SPF設定の確認**
+
    ```bash
    # メール認証の確認
    dig TXT _dmarc.yourdomain.com
@@ -83,9 +90,11 @@ console.log('Rate limit status:', rateLimitResult);
 ### 1.3 メール配信の遅延
 
 #### 症状
+
 - メール送信から受信まで時間がかかる
 
 #### 解決方法
+
 ```javascript
 // 配信時間の監視
 const startTime = Date.now();
@@ -104,10 +113,12 @@ console.log(`Email delivery time: ${deliveryTime}ms`);
 ### 2.1 CRONジョブが実行されない
 
 #### 症状
+
 - 定期的なリマインダーメールが送信されない
 - Cloud Schedulerのログにエラーが記録される
 
 #### 確認方法
+
 ```bash
 # Cloud Schedulerのログ確認
 gcloud logging read "resource.type=cloud_scheduler_job" --limit=50
@@ -119,6 +130,7 @@ curl -X GET "https://yourdomain.com/api/cron/reminders?CRON_SECRET=your-secret"
 #### 解決方法
 
 **原因1: CRON認証の問題**
+
 ```javascript
 // 環境変数の確認
 console.log('CRON_SECRET configured:', !!process.env.CRON_SECRET);
@@ -130,6 +142,7 @@ console.log('CRON_SECRET configured:', !!process.env.CRON_SECRET);
 ```
 
 **原因2: エンドポイントの問題**
+
 ```bash
 # エンドポイントの手動テスト
 curl -X POST "https://yourdomain.com/api/cron/reminders" \
@@ -145,18 +158,20 @@ curl -X POST "https://yourdomain.com/api/cron/reminders" \
 ### 2.2 リマインダーが重複送信される
 
 #### 症状
+
 - 同じ予約に対して複数のリマインダーが送信される
 
 #### 確認方法
+
 ```sql
 -- 重複送信の確認
-SELECT 
+SELECT
   payload->>'reservation_id' as reservation_id,
   payload->>'email_type' as email_type,
   COUNT(*) as send_count,
   MIN(created_at) as first_sent,
   MAX(created_at) as last_sent
-FROM events 
+FROM events
 WHERE type = 'email_sent'
   AND created_at >= NOW() - INTERVAL '24 hours'
 GROUP BY payload->>'reservation_id', payload->>'email_type'
@@ -164,6 +179,7 @@ HAVING COUNT(*) > 1;
 ```
 
 #### 解決方法
+
 ```javascript
 // 冪等性チェックの実装確認
 const idempotencyResult = await checkEmailIdempotency(reservationId, emailType);
@@ -181,30 +197,37 @@ if (!idempotencyResult.isAllowed) {
 ### 2.3 リマインダーのタイミングが不正確
 
 #### 症状
+
 - 24時間前、2時間前のタイミングがずれる
 
 #### 確認方法
+
 ```javascript
 // タイミング計算の確認
 const now = new Date();
 const referenceDate = new Date(now.getTime() + shiftMinutes * 60 * 1000);
-console.log('Reference date:', referenceDate.toISOString());
-console.log('24h window:', window24h);
-console.log('2h window:', window2h);
+console.log("Reference date:", referenceDate.toISOString());
+console.log("24h window:", window24h);
+console.log("2h window:", window2h);
 ```
 
 #### 解決方法
+
 1. **タイムゾーンの確認**
+
    ```javascript
    // UTC時間での処理確認
-   console.log('Server timezone:', Intl.DateTimeFormat().resolvedOptions().timeZone);
+   console.log(
+     "Server timezone:",
+     Intl.DateTimeFormat().resolvedOptions().timeZone,
+   );
    ```
 
 2. **ウィンドウ設定の調整**
    ```javascript
    // ウィンドウサイズの調整
    const window24h = { start: 23.5 * 60, end: 24.5 * 60 }; // 23.5-24.5時間前
-   const window2h = { start: 1.5 * 60, end: 2.5 * 60 };   // 1.5-2.5時間前
+   const window2h = { start: 1.5 * 60, end: 2.5 * 60 }; // 1.5-2.5時間前
    ```
 
 ## 3. 認証・権限の問題
@@ -212,55 +235,66 @@ console.log('2h window:', window2h);
 ### 3.1 管理者認証が失敗する
 
 #### 症状
+
 - 管理者機能にアクセスできない
 - 401 Unauthorizedエラーが発生
 
 #### 確認方法
+
 ```javascript
 // 認証状態の確認
 const authResult = await verifyAdminAuth(request);
-console.log('Auth result:', authResult);
+console.log("Auth result:", authResult);
 ```
 
 #### 解決方法
+
 1. **Supabase認証の確認**
+
    ```javascript
    // JWTトークンの確認
-   const token = request.headers.get('authorization')?.replace('Bearer ', '');
+   const token = request.headers.get("authorization")?.replace("Bearer ", "");
    const { data, error } = await supabase.auth.getUser(token);
    ```
 
 2. **管理者ドメイン制限の確認**
+
    ```javascript
    // 環境変数の確認
-   console.log('ADMIN_EMAIL_DOMAINS:', process.env.ADMIN_EMAIL_DOMAINS);
-   
+   console.log("ADMIN_EMAIL_DOMAINS:", process.env.ADMIN_EMAIL_DOMAINS);
+
    // ドメイン検証の確認
    const userEmail = user.email;
-   const allowedDomains = process.env.ADMIN_EMAIL_DOMAINS?.split(',') || [];
-   const isAllowed = allowedDomains.some(domain => userEmail.endsWith(`@${domain}`));
+   const allowedDomains = process.env.ADMIN_EMAIL_DOMAINS?.split(",") || [];
+   const isAllowed = allowedDomains.some((domain) =>
+     userEmail.endsWith(`@${domain}`),
+   );
    ```
 
 ### 3.2 API制限エラー
 
 #### 症状
+
 - 429 Too Many Requestsエラー
 - レート制限に達したメッセージ
 
 #### 確認方法
+
 ```javascript
 // レート制限状態の確認
 const rateLimitStatus = checkRateLimit(request, options);
-console.log('Rate limit status:', rateLimitStatus);
+console.log("Rate limit status:", rateLimitStatus);
 ```
 
 #### 解決方法
+
 1. **制限値の調整**
+
    ```javascript
    // レート制限設定の見直し
    const rateLimitOptions = {
      windowMs: 60 * 60 * 1000, // 1時間
-     maxRequests: 20,          // 20回まで（10回から増加）
+     maxRequests: 20, // 20回まで（10回から増加）
    };
    ```
 
@@ -274,28 +308,35 @@ console.log('Rate limit status:', rateLimitStatus);
 ### 4.1 接続エラー
 
 #### 症状
+
 - データベースクエリが失敗する
 - 接続タイムアウトエラー
 
 #### 確認方法
+
 ```javascript
 // 接続テスト
 const { data, error } = await supabase
-  .from('reservations')
-  .select('count')
+  .from("reservations")
+  .select("count")
   .limit(1);
 
 if (error) {
-  console.error('Database connection error:', error);
+  console.error("Database connection error:", error);
 }
 ```
 
 #### 解決方法
+
 1. **接続設定の確認**
+
    ```javascript
    // 環境変数の確認
-   console.log('SUPABASE_URL configured:', !!process.env.SUPABASE_URL);
-   console.log('SUPABASE_SERVICE_ROLE_KEY configured:', !!process.env.SUPABASE_SERVICE_ROLE_KEY);
+   console.log("SUPABASE_URL configured:", !!process.env.SUPABASE_URL);
+   console.log(
+     "SUPABASE_SERVICE_ROLE_KEY configured:",
+     !!process.env.SUPABASE_SERVICE_ROLE_KEY,
+   );
    ```
 
 2. **接続プールの最適化**
@@ -303,43 +344,47 @@ if (error) {
    // 接続プールサイズの調整
    const supabase = createClient(url, key, {
      db: {
-       schema: 'public',
+       schema: "public",
      },
      auth: {
        autoRefreshToken: false,
-       persistSession: false
-     }
+       persistSession: false,
+     },
    });
    ```
 
 ### 4.2 クエリパフォーマンスの問題
 
 #### 症状
+
 - データベースクエリが遅い
 - タイムアウトエラーが発生
 
 #### 確認方法
+
 ```sql
 -- 実行計画の確認
-EXPLAIN ANALYZE 
-SELECT * FROM reservations 
+EXPLAIN ANALYZE
+SELECT * FROM reservations
 WHERE appointment_datetime BETWEEN $1 AND $2;
 
 -- インデックスの確認
-SELECT indexname, indexdef 
-FROM pg_indexes 
+SELECT indexname, indexdef
+FROM pg_indexes
 WHERE tablename = 'reservations';
 ```
 
 #### 解決方法
+
 1. **インデックスの追加**
+
    ```sql
    -- 日時検索用インデックス
-   CREATE INDEX idx_reservations_appointment_datetime 
+   CREATE INDEX idx_reservations_appointment_datetime
    ON reservations(appointment_datetime);
-   
+
    -- 複合インデックス
-   CREATE INDEX idx_reservations_status_datetime 
+   CREATE INDEX idx_reservations_status_datetime
    ON reservations(status, appointment_datetime);
    ```
 
@@ -347,10 +392,10 @@ WHERE tablename = 'reservations';
    ```javascript
    // 必要なカラムのみ選択
    const { data } = await supabase
-     .from('reservations')
-     .select('id, customer_email, appointment_datetime')
-     .gte('appointment_datetime', startTime)
-     .lte('appointment_datetime', endTime);
+     .from("reservations")
+     .select("id, customer_email, appointment_datetime")
+     .gte("appointment_datetime", startTime)
+     .lte("appointment_datetime", endTime);
    ```
 
 ## 5. パフォーマンスの問題
@@ -358,29 +403,33 @@ WHERE tablename = 'reservations';
 ### 5.1 レスポンス時間の遅延
 
 #### 症状
+
 - APIレスポンスが遅い
 - ページ読み込みに時間がかかる
 
 #### 確認方法
+
 ```javascript
 // レスポンス時間の測定
 const startTime = Date.now();
-const response = await fetch('/api/endpoint');
+const response = await fetch("/api/endpoint");
 const responseTime = Date.now() - startTime;
 console.log(`Response time: ${responseTime}ms`);
 ```
 
 #### 解決方法
+
 1. **キャッシュの実装**
+
    ```javascript
    // メモリキャッシュ
    const cache = new Map();
-   
+
    async function getCachedData(key) {
      if (cache.has(key)) {
        return cache.get(key);
      }
-     
+
      const data = await fetchData(key);
      cache.set(key, data);
      return data;
@@ -391,42 +440,50 @@ console.log(`Response time: ${responseTime}ms`);
    ```javascript
    // バッチクエリの使用
    const reservations = await supabase
-     .from('reservations')
-     .select(`
+     .from("reservations")
+     .select(
+       `
        *,
        service:service_id(name),
        staff:staff_id(display_name)
-     `)
-     .in('id', reservationIds);
+     `,
+     )
+     .in("id", reservationIds);
    ```
 
 ### 5.2 メモリ使用量の増加
 
 #### 症状
+
 - アプリケーションのメモリ使用量が増加
 - Out of Memoryエラー
 
 #### 確認方法
+
 ```javascript
 // メモリ使用量の監視
 const memUsage = process.memoryUsage();
-console.log('Memory usage:', {
-  rss: Math.round(memUsage.rss / 1024 / 1024) + ' MB',
-  heapTotal: Math.round(memUsage.heapTotal / 1024 / 1024) + ' MB',
-  heapUsed: Math.round(memUsage.heapUsed / 1024 / 1024) + ' MB'
+console.log("Memory usage:", {
+  rss: Math.round(memUsage.rss / 1024 / 1024) + " MB",
+  heapTotal: Math.round(memUsage.heapTotal / 1024 / 1024) + " MB",
+  heapUsed: Math.round(memUsage.heapUsed / 1024 / 1024) + " MB",
 });
 ```
 
 #### 解決方法
+
 1. **メモリリークの修正**
+
    ```javascript
    // イベントリスナーの適切な削除
    useEffect(() => {
-     const handleEvent = () => { /* ... */ };
-     window.addEventListener('event', handleEvent);
-     
+     const handleEvent = () => {
+       /* ... */
+     };
+     window.addEventListener("event", handleEvent);
+
      return () => {
-       window.removeEventListener('event', handleEvent);
+       window.removeEventListener("event", handleEvent);
      };
    }, []);
    ```
@@ -439,10 +496,10 @@ console.log('Memory usage:', {
      for (let i = 0; i < data.length; i += batchSize) {
        const batch = data.slice(i, i + batchSize);
        await processBatch(batch);
-       
+
        // メモリ解放のための待機
        if (i % 1000 === 0) {
-         await new Promise(resolve => setTimeout(resolve, 10));
+         await new Promise((resolve) => setTimeout(resolve, 10));
        }
      }
    }
@@ -453,10 +510,12 @@ console.log('Memory usage:', {
 ### 6.1 ビルドエラー
 
 #### 症状
+
 - デプロイ時にビルドが失敗する
 - TypeScriptエラーが発生
 
 #### 確認方法
+
 ```bash
 # ローカルでのビルドテスト
 npm run build
@@ -469,11 +528,13 @@ npm run lint
 ```
 
 #### 解決方法
+
 1. **依存関係の確認**
+
    ```bash
    # 依存関係の更新
    npm update
-   
+
    # パッケージの整合性確認
    npm audit
    ```
@@ -491,40 +552,44 @@ npm run lint
 ### 6.2 環境変数の問題
 
 #### 症状
+
 - 本番環境で機能が動作しない
 - 環境変数が読み込まれない
 
 #### 確認方法
+
 ```javascript
 // 環境変数の確認
-console.log('Environment variables check:', {
+console.log("Environment variables check:", {
   NODE_ENV: process.env.NODE_ENV,
   RESEND_API_KEY: !!process.env.RESEND_API_KEY,
   SUPABASE_URL: !!process.env.SUPABASE_URL,
-  CRON_SECRET: !!process.env.CRON_SECRET
+  CRON_SECRET: !!process.env.CRON_SECRET,
 });
 ```
 
 #### 解決方法
+
 1. **Vercelでの環境変数設定**
    - ダッシュボードで環境変数を確認
    - 本番環境とプレビュー環境の設定を分離
    - 機密情報の適切な管理
 
 2. **環境別設定の実装**
+
    ```javascript
    // 環境別設定
    const config = {
      development: {
        allowDevMocks: true,
-       logLevel: 'debug'
+       logLevel: "debug",
      },
      production: {
        allowDevMocks: false,
-       logLevel: 'error'
-     }
+       logLevel: "error",
+     },
    };
-   
+
    const currentConfig = config[process.env.NODE_ENV] || config.development;
    ```
 
@@ -535,24 +600,26 @@ console.log('Environment variables check:', {
 ```javascript
 // 構造化ログの実装
 function logError(error, context) {
-  console.error(JSON.stringify({
-    timestamp: new Date().toISOString(),
-    level: 'error',
-    message: error.message,
-    stack: error.stack,
-    context,
-    environment: process.env.NODE_ENV
-  }));
+  console.error(
+    JSON.stringify({
+      timestamp: new Date().toISOString(),
+      level: "error",
+      message: error.message,
+      stack: error.stack,
+      context,
+      environment: process.env.NODE_ENV,
+    }),
+  );
 }
 
 // 使用例
 try {
   await sendEmail(emailData);
 } catch (error) {
-  logError(error, { 
-    operation: 'email_send',
+  logError(error, {
+    operation: "email_send",
     reservationId,
-    emailType 
+    emailType,
   });
 }
 ```
@@ -565,13 +632,15 @@ export async function GET() {
   const checks = {
     database: await checkDatabase(),
     email: await checkEmailService(),
-    memory: checkMemoryUsage()
+    memory: checkMemoryUsage(),
   };
-  
-  const isHealthy = Object.values(checks).every(check => check.status === 'ok');
-  
+
+  const isHealthy = Object.values(checks).every(
+    (check) => check.status === "ok",
+  );
+
   return NextResponse.json(checks, {
-    status: isHealthy ? 200 : 503
+    status: isHealthy ? 200 : 503,
   });
 }
 ```
@@ -599,7 +668,7 @@ export async function GET() {
 
 ```sql
 -- データ整合性チェック
-SELECT 
+SELECT
   r.id,
   r.customer_email,
   r.appointment_datetime,

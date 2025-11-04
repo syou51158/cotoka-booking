@@ -36,6 +36,8 @@ export interface AvailableSlot {
   start: string; // ISO string in Asia/Tokyo
   end: string; // ISO string in Asia/Tokyo
   staffId: string;
+  status?: "available" | "hold"; // hold = someone is currently paying
+  holdExpiresAt?: string; // ISO string when hold expires
 }
 
 function toUtc(date: string, time: string) {
@@ -70,7 +72,10 @@ async function resolveSlotInterval(
   {
     service,
     staffId,
-  }: { service: { slot_interval_min?: number | null; [key: string]: unknown }; staffId?: string }
+  }: {
+    service: { slot_interval_min?: number | null; [key: string]: unknown };
+    staffId?: string;
+  },
 ): Promise<number> {
   // 1) スタッフ個別設定
   if (staffId) {
@@ -122,7 +127,10 @@ export async function getAvailableSlots({
     return [];
   }
 
-  const slotIntervalMin = await resolveSlotInterval(client, { service, staffId });
+  const slotIntervalMin = await resolveSlotInterval(client, {
+    service,
+    staffId,
+  });
 
   const staffIds = staffId
     ? [staffId]
@@ -179,7 +187,9 @@ export async function getAvailableSlots({
       "*, service:service_id(duration_min, buffer_before_min, buffer_after_min)",
     )
     .in("staff_id", staffIds)
-    .neq("status", "canceled")
+    .or(
+      `status.in.(confirmed,paid),and(status.eq.pending,pending_expires_at.gt.${new Date().toISOString()})`,
+    ) // Include confirmed/paid and active pending
     .gte("start_at", dayStartUtc)
     .lte("start_at", dayEndUtc);
 
@@ -213,7 +223,10 @@ export async function getAvailableSlots({
       const windowStart = max([window.start, resolvedWindow.start]);
       const windowEnd = min([window.end, resolvedWindow.end]);
 
-      let cursor = roundUpToInterval(addMinutes(windowStart, service.buffer_before_min), slotIntervalMin);
+      let cursor = roundUpToInterval(
+        addMinutes(windowStart, service.buffer_before_min),
+        slotIntervalMin,
+      );
 
       while (cursor < windowEnd) {
         const serviceEnd = addMinutes(cursor, service.duration_min);
@@ -276,7 +289,9 @@ async function getStaffIdsForService(
   }
   const rows = (data ?? []) as StaffServiceJoined[];
   return rows
-    .filter((row) => Boolean(row.staff?.active ?? (row.staff as any)?.is_active))
+    .filter((row) =>
+      Boolean(row.staff?.active ?? (row.staff as any)?.is_active),
+    )
     .map((row) => row.staff_id);
 }
 

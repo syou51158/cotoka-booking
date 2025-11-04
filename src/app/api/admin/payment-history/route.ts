@@ -1,9 +1,15 @@
 import { NextResponse } from "next/server";
-import { requireAdmin } from "@/lib/admin-auth";
+import { verifyAdminAuth } from "@/lib/admin-auth";
 import { getReservationPaymentHistory } from "@/server/admin";
 
 export async function GET(req: Request) {
-  requireAdmin();
+  const auth = await verifyAdminAuth(req);
+  if (!auth.success) {
+    return NextResponse.json(
+      { error: auth.error ?? "Unauthorized" },
+      { status: 401 },
+    );
+  }
   const url = new URL(req.url);
   const rid = url.searchParams.get("rid");
   if (!rid) {

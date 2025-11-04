@@ -16,14 +16,24 @@ export async function GET(request: Request) {
   }
 
   const amount = amountParam != null ? Number(amountParam) : undefined;
-  const method = methodParam === "card" ? "card" : methodParam === "other" ? "other" : "cash";
+  const method =
+    methodParam === "card"
+      ? "card"
+      : methodParam === "other"
+        ? "other"
+        : "cash";
 
   try {
-    const updated = await settleReservationPayment(reservationId, method as any, amount);
+    const updated = await settleReservationPayment(
+      reservationId,
+      method as any,
+      amount,
+    );
     return NextResponse.json({ status: "ok", reservation: updated });
   } catch (error) {
     console.error("Dev settle payment failed", error);
-    const message = error instanceof Error ? error.message : "Internal Server Error";
+    const message =
+      error instanceof Error ? error.message : "Internal Server Error";
     const status = (error as any)?.statusCode ?? 500;
     return NextResponse.json({ message }, { status });
   }

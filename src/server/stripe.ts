@@ -50,30 +50,31 @@ export async function createCheckoutSessionForReservation(
       const t = setTimeout(() => {
         reject(new Error(`DB timeout after ${ms}ms`));
       }, ms);
-      p
-        .then((v) => {
-          clearTimeout(t);
-          resolve(v);
-        })
-        .catch((e) => {
-          clearTimeout(t);
-          reject(e);
-        });
+      p.then((v) => {
+        clearTimeout(t);
+        resolve(v);
+      }).catch((e) => {
+        clearTimeout(t);
+        reject(e);
+      });
     });
   // Supabase のクエリビルダーは PromiseLike を実装しているが、型互換性の都合で明示的に any として扱う
   const response = await withTimeout<any>(
-    (client
+    client
       .from("reservations")
       .select(
         "*, service:service_id(name, price_jpy, currency, requires_prepayment)",
       )
       .eq("id", reservationId)
-      .maybeSingle() as any),
+      .maybeSingle() as any,
     12000,
   );
   const data = response?.data as any;
   const error = response?.error as any;
-  console.log("[stripe] reservation fetch done", { ok: !error, hasData: !!data });
+  console.log("[stripe] reservation fetch done", {
+    ok: !error,
+    hasData: !!data,
+  });
 
   if (error) {
     throw error;
@@ -124,8 +125,8 @@ export async function createCheckoutSessionForReservation(
   const headerLocale = /\bja\b/i.test(acceptLanguage)
     ? "ja"
     : /\ben\b/i.test(acceptLanguage)
-    ? "en"
-    : undefined;
+      ? "en"
+      : undefined;
   const locale =
     (typeof data.locale === "string" && data.locale.length > 0
       ? data.locale
@@ -155,7 +156,10 @@ export async function createCheckoutSessionForReservation(
   const successUrl = `${base}/${locale}/success?rid=${encodeURIComponent(
     data.id,
   )}&cs_id={CHECKOUT_SESSION_ID}`;
-  const cancelUrl = `${base}/${locale}/booking`;
+  // キャンセル時は確認ページへ戻す（サービスIDを含むルーティングに合わせる）
+  const cancelUrl = `${base}/${locale}/booking/${encodeURIComponent(
+    data.service_id ?? "",
+  )}/confirm?rid=${encodeURIComponent(data.id)}&from=stripe-cancel`;
 
   // セッション作成の前後をイベント記録して、原因特定しやすくする
   // 非同期で記録し、APIレスポンスをブロックしない
@@ -168,18 +172,19 @@ export async function createCheckoutSessionForReservation(
       const t = setTimeout(() => {
         reject(new Error(`Stripe checkout create timeout after ${ms}ms`));
       }, ms);
-      p
-        .then((v) => {
-          clearTimeout(t);
-          resolve(v);
-        })
-        .catch((e) => {
-          clearTimeout(t);
-          reject(e);
-        });
+      p.then((v) => {
+        clearTimeout(t);
+        resolve(v);
+      }).catch((e) => {
+        clearTimeout(t);
+        reject(e);
+      });
     });
 
-  console.log("[stripe] checkout.sessions.create start", { successUrl, cancelUrl });
+  console.log("[stripe] checkout.sessions.create start", {
+    successUrl,
+    cancelUrl,
+  });
   let session: Stripe.Checkout.Session;
   try {
     session = await withTimeoutStripe(
@@ -223,7 +228,10 @@ export async function createCheckoutSessionForReservation(
       },
     } as const;
   }
-  console.log("[stripe] checkout.sessions.create done", { sessionId: session.id, hasUrl: !!session.url });
+  console.log("[stripe] checkout.sessions.create done", {
+    sessionId: session.id,
+    hasUrl: !!session.url,
+  });
 
   // 記録は非同期で行い、Stripe応答の返却を優先
   recordEvent("stripe.checkout.create.success", {
@@ -247,7 +255,8 @@ export async function createCheckoutSessionForReservation(
     .eq("id", data.id)
     .then(
       () => {},
-      (e: unknown) => console.warn("Failed to update reservation with Stripe session", e),
+      (e: unknown) =>
+        console.warn("Failed to update reservation with Stripe session", e),
     );
 
   return { data: { url: session.url!, id: session.id } } as const;
@@ -265,7 +274,11 @@ export async function verifyAndHandleWebhook(
 
   let event: Stripe.Event;
   try {
-    event = stripe.webhooks.constructEvent(payload, signature ?? "", webhookSecret);
+    event = stripe.webhooks.constructEvent(
+      payload,
+      signature ?? "",
+      webhookSecret,
+    );
   } catch (err) {
     await recordEvent("stripe.webhook_error", {
       message: err instanceof Error ? err.message : "Unknown error",
@@ -293,7 +306,7 @@ export async function verifyAndHandleWebhook(
           stripe_payment_intent:
             typeof session.payment_intent === "string"
               ? session.payment_intent
-              : session.payment_intent?.id ?? null,
+              : (session.payment_intent?.id ?? null),
         });
       } else {
         await markReservationPaid(reservationId, {
@@ -318,7 +331,7 @@ export async function verifyAndHandleWebhook(
           stripe_payment_intent:
             typeof session.payment_intent === "string"
               ? session.payment_intent
-              : session.payment_intent?.id ?? null,
+              : (session.payment_intent?.id ?? null),
         });
       }
     }

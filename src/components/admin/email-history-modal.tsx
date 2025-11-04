@@ -35,7 +35,9 @@ export default function EmailHistoryModal({ reservationId }: Props) {
       setLoading(true);
       setError(null);
       try {
-        const res = await fetch(`/api/admin/email-history?rid=${reservationId}`);
+        const res = await fetch(
+          `/api/admin/email-history?rid=${reservationId}`,
+        );
         const data = await res.json();
         if (!res.ok) throw new Error(data?.error ?? "failed");
         setItems((data?.items ?? []) as EmailHistoryItem[]);
@@ -62,11 +64,21 @@ export default function EmailHistoryModal({ reservationId }: Props) {
 
       {open && (
         <div className="fixed inset-0 z-50 flex items-center justify-center">
-          <div className="absolute inset-0 bg-black/60" onClick={() => setOpen(false)} />
+          <div
+            className="absolute inset-0 bg-black/60"
+            onClick={() => setOpen(false)}
+          />
           <div className="relative z-10 w-[95vw] max-w-2xl rounded-lg border border-slate-800 bg-slate-900 p-4 shadow-xl">
             <div className="flex items-center justify-between">
-              <h3 className="text-base font-semibold text-slate-200">メール送信履歴</h3>
-              <Button variant="ghost" size="sm" onClick={() => setOpen(false)} className="text-slate-300">
+              <h3 className="text-base font-semibold text-slate-200">
+                メール送信履歴
+              </h3>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setOpen(false)}
+                className="text-slate-300"
+              >
                 閉じる
               </Button>
             </div>
@@ -81,30 +93,49 @@ export default function EmailHistoryModal({ reservationId }: Props) {
                 <div className="max-h-96 overflow-y-auto">
                   <ul className="space-y-2">
                     {items.map((item) => (
-                      <li key={item.id} className="rounded border border-slate-800 bg-slate-950/50 p-3">
+                      <li
+                        key={item.id}
+                        className="rounded border border-slate-800 bg-slate-950/50 p-3"
+                      >
                         <div className="flex items-start justify-between">
                           <div className="flex-1">
                             <div className="flex items-center gap-2">
                               <span className="text-sm font-medium text-slate-200">
                                 {formatEmailType(item.details.email_type)}
                               </span>
-                              <Badge 
-                                variant={item.type === "email_sent" ? "default" : "destructive"}
-                                className={item.type === "email_sent" 
-                                  ? "bg-emerald-700/70 text-emerald-100" 
-                                  : "bg-red-700/70 text-red-100"
+                              <Badge
+                                variant={
+                                  item.type === "email_sent"
+                                    ? "default"
+                                    : "destructive"
+                                }
+                                className={
+                                  item.type === "email_sent"
+                                    ? "bg-emerald-700/70 text-emerald-100"
+                                    : "bg-red-700/70 text-red-100"
                                 }
                               >
-                                {item.type === "email_sent" ? "送信成功" : "送信失敗"}
+                                {item.type === "email_sent"
+                                  ? "送信成功"
+                                  : "送信失敗"}
                               </Badge>
                               {item.details.source && (
-                                <Badge variant="outline" className="border-slate-600 text-slate-300">
+                                <Badge
+                                  variant="outline"
+                                  className="border-slate-600 text-slate-300"
+                                >
                                   {formatSource(item.details.source)}
                                 </Badge>
                               )}
                             </div>
                             <div className="mt-1 text-xs text-slate-400">
-                              <div>日時: {format(new Date(item.created_at), "yyyy/MM/dd HH:mm:ss")}</div>
+                              <div>
+                                日時:{" "}
+                                {format(
+                                  new Date(item.created_at),
+                                  "yyyy/MM/dd HH:mm:ss",
+                                )}
+                              </div>
                               {item.details.recipient && (
                                 <div>宛先: {item.details.recipient}</div>
                               )}
@@ -112,10 +143,15 @@ export default function EmailHistoryModal({ reservationId }: Props) {
                                 <div>プロバイダー: {item.details.provider}</div>
                               )}
                               {item.details.message_id && (
-                                <div>Message-ID: {maskMessageId(item.details.message_id)}</div>
+                                <div>
+                                  Message-ID:{" "}
+                                  {maskMessageId(item.details.message_id)}
+                                </div>
                               )}
                               {item.details.error_message && (
-                                <div className="text-red-400">エラー: {item.details.error_message}</div>
+                                <div className="text-red-400">
+                                  エラー: {item.details.error_message}
+                                </div>
                               )}
                             </div>
                           </div>
@@ -163,5 +199,9 @@ function formatSource(source?: string): string {
 
 function maskMessageId(messageId: string): string {
   if (messageId.length <= 8) return messageId;
-  return messageId.substring(0, 4) + "..." + messageId.substring(messageId.length - 4);
+  return (
+    messageId.substring(0, 4) +
+    "..." +
+    messageId.substring(messageId.length - 4)
+  );
 }

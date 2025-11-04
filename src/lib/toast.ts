@@ -21,7 +21,9 @@ export function showToast(payload: Omit<ToastMessage, "id">) {
   }
 }
 
-export function subscribeToast(listener: (msg: ToastMessage) => void): () => void {
+export function subscribeToast(
+  listener: (msg: ToastMessage) => void,
+): () => void {
   listeners.add(listener);
   return () => {
     listeners.delete(listener);

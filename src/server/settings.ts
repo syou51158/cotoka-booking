@@ -1,6 +1,13 @@
 import { createSupabaseServiceRoleClient } from "@/lib/supabase";
 import { revalidateTag } from "next/cache";
-import { SITE_NAME, SALON_NAME, SALON_ADDRESS, SALON_PHONE, SALON_MAP_URL, TIMEZONE } from "@/lib/config";
+import {
+  SITE_NAME,
+  SALON_NAME,
+  SALON_ADDRESS,
+  SALON_PHONE,
+  SALON_MAP_URL,
+  TIMEZONE,
+} from "@/lib/config";
 import type { Database } from "@/types/database";
 import { recordEvent } from "./events";
 
@@ -30,15 +37,13 @@ async function withTimeout<T>(p: PromiseLike<T>, ms = 2500): Promise<T> {
     const t = setTimeout(() => {
       reject(new Error(`Operation timeout after ${ms}ms`));
     }, ms);
-    p
-      .then((v) => {
-        clearTimeout(t);
-        resolve(v);
-      })
-      .catch((e) => {
-        clearTimeout(t);
-        reject(e);
-      });
+    p.then((v) => {
+      clearTimeout(t);
+      resolve(v);
+    }).catch((e) => {
+      clearTimeout(t);
+      reject(e);
+    });
   });
 }
 
@@ -59,7 +64,9 @@ const DEFAULTS: BusinessProfile = {
   updated_by: undefined,
 };
 
-export async function getBusinessProfile({ preferCache = true }: { preferCache?: boolean } = {}): Promise<BusinessProfile> {
+export async function getBusinessProfile({
+  preferCache = true,
+}: { preferCache?: boolean } = {}): Promise<BusinessProfile> {
   // キャッシュ優先時は公開API経由でタグを付けて取得
   if (preferCache) {
     try {
@@ -85,7 +92,10 @@ export async function getBusinessProfile({ preferCache = true }: { preferCache?:
           website_url: data.website_url ?? DEFAULTS.website_url,
           map_url: data.map_url ?? DEFAULTS.map_url,
           timezone: data.timezone ?? DEFAULTS.timezone,
-          default_locale: (data.default_locale === "en" || data.default_locale === "zh") ? data.default_locale : "ja",
+          default_locale:
+            data.default_locale === "en" || data.default_locale === "zh"
+              ? data.default_locale
+              : "ja",
           currency: data.currency ?? DEFAULTS.currency,
           updated_at: data.updated_at ?? DEFAULTS.updated_at,
         } as BusinessProfile;
@@ -99,11 +109,11 @@ export async function getBusinessProfile({ preferCache = true }: { preferCache?:
   try {
     const supabase = createSupabaseServiceRoleClient();
     const { data, error } = await withTimeout<any>(
-      (supabase
+      supabase
         .from("salons")
         .select("*")
         .eq("salon_id", 1)
-        .maybeSingle() as any),
+        .maybeSingle() as any,
       2500,
     );
 
@@ -135,7 +145,10 @@ export async function getBusinessProfile({ preferCache = true }: { preferCache?:
 
 export type AdminCtx = { user_id?: string; email?: string };
 
-export async function updateBusinessProfile(input: Partial<BusinessProfile>, adminCtx?: AdminCtx): Promise<BusinessProfile> {
+export async function updateBusinessProfile(
+  input: Partial<BusinessProfile>,
+  adminCtx?: AdminCtx,
+): Promise<BusinessProfile> {
   const supabase = createSupabaseServiceRoleClient();
 
   // 現在値取得
@@ -146,20 +159,42 @@ export async function updateBusinessProfile(input: Partial<BusinessProfile>, adm
     ...before,
     ...input,
     id: 1,
-    default_locale: (input.default_locale === "en" || input.default_locale === "zh") ? input.default_locale : (input.default_locale === "ja" ? "ja" : before.default_locale),
+    default_locale:
+      input.default_locale === "en" || input.default_locale === "zh"
+        ? input.default_locale
+        : input.default_locale === "ja"
+          ? "ja"
+          : before.default_locale,
     updated_at: new Date().toISOString(),
     updated_by: adminCtx?.email ?? adminCtx?.user_id ?? undefined,
   } as BusinessProfile;
 
   // バリデーション（必須）
-  if (!next.salon_name || !next.email_from || !next.timezone || !next.default_locale) {
-    throw new Error("Validation failed: salon_name, email_from, timezone, default_locale are required");
+  if (
+    !next.salon_name ||
+    !next.email_from ||
+    !next.timezone ||
+    !next.default_locale
+  ) {
+    throw new Error(
+      "Validation failed: salon_name, email_from, timezone, default_locale are required",
+    );
   }
 
   // 差分抽出
   const fields_changed: string[] = [];
   for (const key of [
-    "salon_name","address_ja","address_en","address_zh","phone","email_from","website_url","map_url","timezone","default_locale","currency"
+    "salon_name",
+    "address_ja",
+    "address_en",
+    "address_zh",
+    "phone",
+    "email_from",
+    "website_url",
+    "map_url",
+    "timezone",
+    "default_locale",
+    "currency",
   ] as const) {
     if ((before as any)[key] !== (next as any)[key]) fields_changed.push(key);
   }

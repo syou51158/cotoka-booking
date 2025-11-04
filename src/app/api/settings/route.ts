@@ -19,8 +19,14 @@ export async function GET() {
       currency: profile.currency,
       updated_at: profile.updated_at,
     };
-    return NextResponse.json(payload, { status: 200, headers: { "Cache-Control": "public, max-age=60" } });
+    return NextResponse.json(payload, {
+      status: 200,
+      headers: { "Cache-Control": "public, max-age=60" },
+    });
   } catch (error) {
-    return NextResponse.json({ error: "failed_to_fetch_settings" }, { status: 500 });
+    return NextResponse.json(
+      { error: "failed_to_fetch_settings" },
+      { status: 500 },
+    );
   }
 }

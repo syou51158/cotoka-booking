@@ -6,9 +6,14 @@ import { createSupabaseServiceRoleClient } from "@/lib/supabase";
 export const runtime = "nodejs";
 
 export async function GET(request: Request) {
-  const allow = env.ALLOW_DEV_MOCKS === "true" && env.NEXT_PUBLIC_ALLOW_DEV_MOCKS === "true";
+  const allow =
+    env.ALLOW_DEV_MOCKS === "true" &&
+    env.NEXT_PUBLIC_ALLOW_DEV_MOCKS === "true";
   if (!allow) {
-    return NextResponse.json({ error: "Not allowed in this environment" }, { status: 403 });
+    return NextResponse.json(
+      { error: "Not allowed in this environment" },
+      { status: 403 },
+    );
   }
 
   const url = new URL(request.url);

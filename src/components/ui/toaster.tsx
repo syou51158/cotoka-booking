@@ -28,8 +28,8 @@ export default function Toaster() {
             (item.variant === "error"
               ? "border-red-200 bg-red-50 text-red-700"
               : item.variant === "success"
-              ? "border-emerald-200 bg-emerald-50 text-emerald-700"
-              : "border-slate-200 bg-white text-slate-700")
+                ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+                : "border-slate-200 bg-white text-slate-700")
           }
         >
           {item.title ? (

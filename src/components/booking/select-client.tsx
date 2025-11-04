@@ -26,10 +26,20 @@ interface Props {
     price_jpy: number;
   };
   staff: { id: string; name: string; color: string }[];
-  onSlotChange?: (slot: AvailableSlot | null, extraRows?: { label: string; value: string }[], ctaHref?: string) => void;
+  onSlotChange?: (
+    slot: AvailableSlot | null,
+    extraRows?: { label: string; value: string }[],
+    ctaHref?: string,
+  ) => void;
 }
 
-export default function SelectClient({ locale, dict, service, staff, onSlotChange }: Props) {
+export default function SelectClient({
+  locale,
+  dict,
+  service,
+  staff,
+  onSlotChange,
+}: Props) {
   const [selectedSlot, setSelectedSlot] = useState<AvailableSlot | null>(null);
 
   const durationLabel = useMemo(() => {
@@ -50,10 +60,14 @@ export default function SelectClient({ locale, dict, service, staff, onSlotChang
 
   const extraRows = useMemo(() => {
     if (!selectedSlot) return undefined;
-    const staffName = staff.find((s) => s.id === selectedSlot.staffId)?.name ?? "-";
+    const staffName =
+      staff.find((s) => s.id === selectedSlot.staffId)?.name ?? "-";
     return [
       { label: dict.booking.summary.staff, value: staffName },
-      { label: dict.booking.summary.time, value: formatDisplay(selectedSlot.start) },
+      {
+        label: dict.booking.summary.time,
+        value: formatDisplay(selectedSlot.start),
+      },
     ];
   }, [selectedSlot, staff, dict.booking.summary]);
 
@@ -65,7 +79,9 @@ export default function SelectClient({ locale, dict, service, staff, onSlotChang
     <>
       <Card className="rounded-2xl shadow-md">
         <CardHeader>
-          <CardTitle className="text-xl font-semibold text-[var(--ink)]">{dict.select.title}</CardTitle>
+          <CardTitle className="text-xl font-semibold text-[var(--ink)]">
+            {dict.select.title}
+          </CardTitle>
         </CardHeader>
         <CardContent>
           <SlotSelector
@@ -90,7 +106,9 @@ export default function SelectClient({ locale, dict, service, staff, onSlotChang
           disabled={!selectedSlot}
           extraRows={extraRows}
           durationNote={{
-            treatmentMin: service.duration_min - (service.buffer_before_min + service.buffer_after_min),
+            treatmentMin:
+              service.duration_min -
+              (service.buffer_before_min + service.buffer_after_min),
             bufferBeforeMin: service.buffer_before_min,
             bufferAfterMin: service.buffer_after_min,
           }}

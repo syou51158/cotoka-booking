@@ -29,11 +29,18 @@ interface ReservationPayload {
 interface Props {
   locale: string;
   dict: ManageDictionary;
+  initialCode?: string;
+  initialContact?: string;
 }
 
-export default function ManageReservationWidget({ locale, dict }: Props) {
-  const [code, setCode] = useState("");
-  const [contact, setContact] = useState("");
+export default function ManageReservationWidget({
+  locale,
+  dict,
+  initialCode,
+  initialContact,
+}: Props) {
+  const [code, setCode] = useState(initialCode ?? "");
+  const [contact, setContact] = useState(initialContact ?? "");
   const [reservation, setReservation] = useState<ReservationPayload | null>(
     null,
   );
@@ -144,11 +151,15 @@ export default function ManageReservationWidget({ locale, dict }: Props) {
       });
       if (!response.ok) {
         const data = await response.json().catch(() => ({}));
-        setError((data as { message?: string }).message ?? "決済の開始に失敗しました");
+        setError(
+          (data as { message?: string }).message ?? "決済の開始に失敗しました",
+        );
         return;
       }
       const payload = await response.json();
-      const url: string | undefined = (payload?.data?.url as string | undefined) ?? (payload?.url as string | undefined);
+      const url: string | undefined =
+        (payload?.data?.url as string | undefined) ??
+        (payload?.url as string | undefined);
       if (url) {
         setStripeUrl(url);
         try {
@@ -160,7 +171,9 @@ export default function ManageReservationWidget({ locale, dict }: Props) {
         }
         setTimeout(() => {
           if (document.visibilityState === "visible") {
-            setMessage("Stripeへの遷移に時間がかかっています。下のリンクから進んでください。");
+            setMessage(
+              "Stripeへの遷移に時間がかかっています。下のリンクから進んでください。",
+            );
           }
         }, 5000);
       } else {
@@ -231,7 +244,14 @@ export default function ManageReservationWidget({ locale, dict }: Props) {
         <div className="rounded border border-slate-200 bg-white p-3 text-sm text-slate-700">
           <p>
             Stripeへ遷移中です。進まない場合は
-            <a href={stripeUrl} target="_blank" rel="noopener" className="font-semibold underline">こちら</a>
+            <a
+              href={stripeUrl}
+              target="_blank"
+              rel="noopener"
+              className="font-semibold underline"
+            >
+              こちら
+            </a>
             をクリックしてください。
           </p>
         </div>

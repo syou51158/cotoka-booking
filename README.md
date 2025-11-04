@@ -7,7 +7,7 @@ Cotoka Relax & Beauty SPA (烏丸御池) の予約・決済体験を Next.js + S
 - Next.js (App Router, TypeScript)
 - Tailwind CSS + shadcn/ui
 - Supabase (Postgres + RLS + RPC)
-- Stripe Checkout + Webhook (+ Resend によるメール通知)
+- Stripe Checkout + Webhook (+ SMTP によるメール通知)
 
 ## 環境変数
 
@@ -94,16 +94,61 @@ npm run dev
   stripe listen --forward-to localhost:3000/api/stripe/webhook
   ```
 - 決済テストカード: `4242 4242 4242 4242`
-- 予約確定メール、24h/2h 前リマインダーは Resend を利用します。
-  - `.env.local` で `RESEND_API_KEY` / `NOTIFY_FROM_EMAIL` を設定（本番）
-  - 開発（`ALLOW_DEV_MOCKS=true`）ではプロバイダ未設定でも送信をドライランし、`events` に `email_sent` を記録します（`provider=dry_run` / `attempt`、失敗時は `email_send_failed`）。
+- 予約確定メール、24h/2h 前リマインダーは SMTP（nodemailer）を利用します。
+  - `.env.local` で `SMTP_HOST` / `SMTP_PORT` / `SMTP_USER` / `SMTP_PASS` / `NOTIFY_FROM_EMAIL` を設定（本番）
+  - 開発（`ALLOW_DEV_MOCKS=true`）かつ SMTP 未設定の場合は送信をドライランし、`events` に `email_sent` を記録します（`provider="dry_run"`、失敗時は `email_send_failed`）。
   - リマインダー実行: `POST /api/cron/reminders` に `x-cron-secret: $CRON_SECRET` ヘッダーを付与（開発の `GET` はヘッダー不要）
 
-  - 確認用エンドポイント（開発）:
-    ```bash
-    curl "http://localhost:3000/api/dev/debug/notifications?rid=<RID>"   # reservation_notifications の sent_at を確認
-    curl "http://localhost:3000/api/dev/debug/events?rid=<RID>&typePrefix=email"  # email_* / reservation.*.sent を確認
-    ```
+- 確認用エンドポイント（開発 / ヘルス・送信テスト）:
+
+  ```bash
+  # ヘルス（常に200）。SMTP未設定時は ok:false / provider:dry_run
+  curl -i http://localhost:3000/api/health/email
+
+  # テスト送信（ALLOW_DEV_MOCKS=true のみ許可）
+  curl -i "http://localhost:3000/api/dev/test-email?to=you@example.com&subject=DRYRUN&html=ok"
+  curl -i -X POST http://localhost:3000/api/dev/test-email \
+    -H "Content-Type: application/json" \
+    -d '{"to":"you@example.com","subject":"DRYRUN","html":"ok"}'
+
+  # イベント確認
+  curl "http://localhost:3000/api/dev/debug/events?typePrefix=email"  # email_* を確認
+  ```
+
+### メール実測（BASE 指定）
+
+- 前提: `.env.local` で `SMTP_*` と `NOTIFY_FROM_EMAIL` を設定。本番相当検証は `ALLOW_DEV_MOCKS=false`。
+- BASE は `.env.local` の `NEXT_PUBLIC_BASE_URL` / `SITE_URL` から決定。開発ではポート競合回避のため `http://localhost:3003` を採用（例）。
+
+```bash
+# 例: BASE 環境変数を使うと便利
+export BASE="http://localhost:3003"
+
+# ヘルス
+curl -i "$BASE/api/health/email"  # smtp 構成時は { ok:true, provider:"smtp" }
+
+# 開発テスト送信
+curl -i "$BASE/api/dev/test-email?to=you@example.com&subject=DRYRUN&html=ok"    # GET（dry_run 想定）
+curl -i -X POST "$BASE/api/dev/test-email" \
+  -H "Content-Type: application/json" \
+  -d '{"to":"you@example.com","subject":"SMTP-TEST","html":"ok"}'     # POST（smtp 許可）
+
+# 管理者再送（Cookie 認証）
+node -e "console.log(require('crypto').createHash('sha256').update(process.env.ADMIN_PASSCODE||'admin1234').digest('hex'))"
+curl -i -X POST "$BASE/api/admin/email/resend" \
+  -H "Content-Type: application/json" \
+  -H "Cookie: cotoka-admin-token=<ADMIN_PASSCODEのSHA256>" \
+  -d '{"reservationId":"<UUID>","kind":"confirmation"}'
+
+# イベント確認（簡易）
+curl "$BASE/api/dev/debug/events?typePrefix=email"   # email_sent / email_send_failed を確認
+```
+
+注意:
+
+- `ALLOW_DEV_MOCKS=false` の環境では、安全のため `/api/dev/test-email` を禁止していますが、SMTPが構成済みの場合に限り POST を検証用途で許可する最小修正を適用済みです（GET は禁止のまま）。
+- dry_run のレスポンス例: `{ ok:true, provider:"dry_run", id:"dry_run:<timestamp>" }`
+- smtp のレスポンス例: `{ ok:true, provider:"smtp" }`（ID形式は実装により異なる場合あり）
 
 - 簡易毎時 cron（開発）
   ```bash
@@ -172,7 +217,7 @@ npm run dev
      name: reservation-reminders
      on:
        schedule:
-         - cron: "*/15 * * * *"  # 15分ごと（適宜調整）
+         - cron: "*/15 * * * *" # 15分ごと（適宜調整）
        workflow_dispatch: {}
      jobs:
        send-reminders:

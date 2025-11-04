@@ -31,13 +31,13 @@ export async function getActiveServices() {
   const { createSupabaseBrowserClient } = await import("@/lib/supabase");
   const client = createSupabaseBrowserClient();
   const { data, error } = await withTimeout<any>(
-    (client
+    client
       .from("services")
       .select("*")
       .eq("active", true)
       .order("price_jpy", { ascending: true, nullsFirst: false })
       .order("duration_min", { ascending: true })
-      .order("name", { ascending: true }) as any),
+      .order("name", { ascending: true }) as any,
     2500,
   );
 
@@ -51,12 +51,12 @@ export async function getActiveServices() {
 export async function getServiceById(id: string): Promise<ServiceRow | null> {
   const client = createSupabaseServiceRoleClient();
   const { data, error } = await withTimeout<any>(
-    (client
+    client
       .from("services")
       .select("*")
       .eq("id", id)
       .limit(1)
-      .maybeSingle() as any),
+      .maybeSingle() as any,
     2500,
   );
 
@@ -74,10 +74,10 @@ export async function getStaffForService(serviceId: string) {
   const client = createSupabaseBrowserClient();
 
   const { data, error } = await withTimeout<any>(
-    (client
+    client
       .from("staff")
       .select("id, display_name, color, active")
-      .eq("active", true) as any),
+      .eq("active", true) as any,
     2500,
   );
 
@@ -92,13 +92,13 @@ export async function getServiceWithRelations(serviceId: string) {
   const { createSupabaseBrowserClient } = await import("@/lib/supabase");
   const client = createSupabaseBrowserClient();
   const { data, error } = await withTimeout<any>(
-    (client
+    client
       .from("services")
       .select("*")
       .eq("id", serviceId)
       .eq("active", true)
       .limit(1)
-      .maybeSingle() as any),
+      .maybeSingle() as any,
     2500,
   );
 

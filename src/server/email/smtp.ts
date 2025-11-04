@@ -17,7 +17,9 @@ export function createSMTPTransport() {
   const pass = SMTP_PASS;
 
   if (!host || !user || !pass) {
-    throw new Error("SMTP configuration missing: check SMTP_HOST/SMTP_USER/SMTP_PASS");
+    throw new Error(
+      "SMTP configuration missing: check SMTP_HOST/SMTP_USER/SMTP_PASS",
+    );
   }
 
   return nodemailer.createTransport({
@@ -38,18 +40,42 @@ export async function verifySMTP() {
   return true;
 }
 
-export async function sendMailSMTP(params: {
+export function isSmtpConfigured(): boolean {
+  const host = SMTP_HOST;
+  const port = SMTP_PORT;
+  const user = SMTP_USER;
+  const pass = SMTP_PASS;
+  return Boolean(host && port && user && pass);
+}
+
+export async function sendSmtp(params: {
   to: string;
   subject: string;
   html: string;
   text?: string;
   ics?: string;
   from?: string;
-}) {
-  const t = createSMTPTransport();
+}): Promise<{ id: string; provider: "smtp" | "dry_run" }> {
+  const allowMocks = process.env.ALLOW_DEV_MOCKS === "true";
+  const configured = isSmtpConfigured();
 
+  // ドライラン: 開発モック許可 かつ SMTP未設定の場合のみ
+  if (allowMocks && !configured) {
+    const fakeId = `dry_run:${Date.now()}`;
+    // 例外は投げず、成功扱いで返す
+    return { id: fakeId, provider: "dry_run" };
+  }
+
+  // 通常SMTP送信
+  const t = createSMTPTransport();
   const attachments = params.ics
-    ? [{ filename: "reservation.ics", content: params.ics, contentType: "text/calendar" }]
+    ? [
+        {
+          filename: "reservation.ics",
+          content: params.ics,
+          contentType: "text/calendar",
+        },
+      ]
     : undefined;
 
   const from = params.from || NOTIFY_FROM_EMAIL || SMTP_USER;
@@ -65,5 +91,18 @@ export async function sendMailSMTP(params: {
     text: params.text,
     attachments,
   });
-  return { messageId: info.messageId };
+  return { id: info.messageId, provider: "smtp" };
+}
+
+// 互換関数（既存呼び出し元のため）。今後 sendSmtp を使用。
+export async function sendMailSMTP(params: {
+  to: string;
+  subject: string;
+  html: string;
+  text?: string;
+  ics?: string;
+  from?: string;
+}) {
+  const res = await sendSmtp(params);
+  return { messageId: res.id };
 }

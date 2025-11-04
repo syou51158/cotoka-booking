@@ -61,9 +61,15 @@ export default function PaymentConfirm({
       ) : null}
       {status === "error" ? (
         <div className="space-y-2">
-          <p className="text-red-600">確認に時間がかかっています。しばらくしてから再試行してください。</p>
+          <p className="text-red-600">
+            確認に時間がかかっています。しばらくしてから再試行してください。
+          </p>
           <div className="flex gap-2">
-            <Button onClick={handleRetry} disabled={retrying} className="bg-[var(--primary)] text-[var(--primary-foreground)] hover:brightness-110">
+            <Button
+              onClick={handleRetry}
+              disabled={retrying}
+              className="bg-[var(--primary)] text-[var(--primary-foreground)] hover:brightness-110"
+            >
               <RotateCcw className="mr-1 h-4 w-4" /> 再試行
             </Button>
             <Button asChild variant="secondary">

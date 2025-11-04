@@ -52,46 +52,50 @@ async function handleRequest(request: Request) {
   }
 
   try {
-    console.log('Starting reminder processing...');
+    console.log("Starting reminder processing...");
     const startTime = Date.now();
-    
+
     const result = await processReservationReminders({
       referenceDate,
       windowMinutes,
     });
-    
+
     const duration = Date.now() - startTime;
     const logData = {
       timestamp: new Date().toISOString(),
       duration_ms: duration,
       sent_count: result.sent || 0,
-      status: 'success',
+      status: "success",
       reference_date: referenceDate?.toISOString(),
-      window_minutes: windowMinutes
+      window_minutes: windowMinutes,
     };
-    
-    console.log('Reminder processing completed:', JSON.stringify(logData));
-    
-    return NextResponse.json({ 
-      status: "ok", 
+
+    console.log("Reminder processing completed:", JSON.stringify(logData));
+
+    return NextResponse.json({
+      status: "ok",
       ...result,
       duration_ms: duration,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
     });
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    const errorMessage =
+      error instanceof Error ? error.message : "Unknown error";
     const logData = {
       timestamp: new Date().toISOString(),
-      status: 'error',
-      error: errorMessage
+      status: "error",
+      error: errorMessage,
     };
-    
-    console.error('Reminder processing failed:', JSON.stringify(logData));
-    return NextResponse.json({ 
-      message: "error", 
-      details: errorMessage,
-      timestamp: new Date().toISOString()
-    }, { status: 500 });
+
+    console.error("Reminder processing failed:", JSON.stringify(logData));
+    return NextResponse.json(
+      {
+        message: "error",
+        details: errorMessage,
+        timestamp: new Date().toISOString(),
+      },
+      { status: 500 },
+    );
   }
 }
 

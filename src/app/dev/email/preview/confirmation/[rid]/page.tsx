@@ -3,14 +3,23 @@ import { renderConfirmationEmail } from "@/lib/email-renderer";
 
 export const dynamic = "force-dynamic";
 
-export default async function ConfirmationEmailPreview({ params }: { params: Promise<{ rid: string }> }) {
+export default async function ConfirmationEmailPreview({
+  params,
+}: {
+  params: Promise<{ rid: string }>;
+}) {
   // 開発環境のみ有効
-  const allow = process.env.ALLOW_DEV_MOCKS === "true" || process.env.NEXT_PUBLIC_ALLOW_DEV_MOCKS === "true";
+  const allow =
+    process.env.ALLOW_DEV_MOCKS === "true" ||
+    process.env.NEXT_PUBLIC_ALLOW_DEV_MOCKS === "true";
   if (!allow) {
     return (
       <div style={{ padding: 24 }}>
         <h1>Dev Email Preview</h1>
-        <p>このページは開発専用です。環境変数 `ALLOW_DEV_MOCKS` を有効にしてください。</p>
+        <p>
+          このページは開発専用です。環境変数 `ALLOW_DEV_MOCKS`
+          を有効にしてください。
+        </p>
       </div>
     );
   }
@@ -19,7 +28,9 @@ export default async function ConfirmationEmailPreview({ params }: { params: Pro
   const supabase = createSupabaseServiceRoleClient();
   const { data: reservation, error } = await supabase
     .from("reservations")
-    .select("*, service:service_id(name,duration_min), staff:staff_id(display_name,email)")
+    .select(
+      "*, service:service_id(name,duration_min), staff:staff_id(display_name,email)",
+    )
     .eq("id", rid)
     .maybeSingle();
 
@@ -47,13 +58,24 @@ export default async function ConfirmationEmailPreview({ params }: { params: Pro
         service: { name: "全身オイルトリートメント", duration_min: 90 },
         staff: { display_name: "佐藤", email: "staff@example.com" },
       };
-      const email = await renderConfirmationEmail(baseReservation as any, locale);
+      const email = await renderConfirmationEmail(
+        baseReservation as any,
+        locale,
+      );
       const emailHtml = email.html.replace(/^<!DOCTYPE html>/, "");
       return (
         <div style={{ padding: 24 }}>
           <h1>確認メールプレビュー（サンプル）</h1>
           <p>Subject: {email.subject}</p>
-          <div style={{ marginTop: 16, border: "1px solid #ddd", borderRadius: 8, overflow: "hidden" }} dangerouslySetInnerHTML={{ __html: emailHtml }} />
+          <div
+            style={{
+              marginTop: 16,
+              border: "1px solid #ddd",
+              borderRadius: 8,
+              overflow: "hidden",
+            }}
+            dangerouslySetInnerHTML={{ __html: emailHtml }}
+          />
         </div>
       );
     }
@@ -65,7 +87,10 @@ export default async function ConfirmationEmailPreview({ params }: { params: Pro
     );
   }
 
-  const locale: "ja" | "en" | "zh" = reservation.locale === "en" || reservation.locale === "zh" ? reservation.locale : "ja";
+  const locale: "ja" | "en" | "zh" =
+    reservation.locale === "en" || reservation.locale === "zh"
+      ? reservation.locale
+      : "ja";
 
   const baseReservation = {
     id: reservation.id,
@@ -76,8 +101,18 @@ export default async function ConfirmationEmailPreview({ params }: { params: Pro
     status: reservation.status,
     code: reservation.code,
     notes: reservation.notes ?? undefined,
-    service: reservation.service ? { name: reservation.service.name, duration_min: reservation.service.duration_min ?? 60 } : null,
-    staff: reservation.staff ? { display_name: reservation.staff.display_name, email: reservation.staff.email ?? "" } : null,
+    service: reservation.service
+      ? {
+          name: reservation.service.name,
+          duration_min: reservation.service.duration_min ?? 60,
+        }
+      : null,
+    staff: reservation.staff
+      ? {
+          display_name: reservation.staff.display_name,
+          email: reservation.staff.email ?? "",
+        }
+      : null,
   };
 
   const email = await renderConfirmationEmail(baseReservation as any, locale);
@@ -87,7 +122,15 @@ export default async function ConfirmationEmailPreview({ params }: { params: Pro
     <div style={{ padding: 24 }}>
       <h1>確認メールプレビュー</h1>
       <p>Subject: {email.subject}</p>
-      <div style={{ marginTop: 16, border: "1px solid #ddd", borderRadius: 8, overflow: "hidden" }} dangerouslySetInnerHTML={{ __html: emailHtml }} />
+      <div
+        style={{
+          marginTop: 16,
+          border: "1px solid #ddd",
+          borderRadius: 8,
+          overflow: "hidden",
+        }}
+        dangerouslySetInnerHTML={{ __html: emailHtml }}
+      />
     </div>
   );
 }

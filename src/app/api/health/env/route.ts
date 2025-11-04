@@ -6,7 +6,8 @@ import { env, getEnvHealth } from "@/lib/env";
 export async function GET() {
   const health = getEnvHealth();
   const missing: string[] = [];
-  if (!env.SUPABASE_URL || env.SUPABASE_URL.length === 0) missing.push("SUPABASE_URL");
+  if (!env.SUPABASE_URL || env.SUPABASE_URL.length === 0)
+    missing.push("SUPABASE_URL");
   if (!health.haveAnonKey) missing.push("SUPABASE_ANON_KEY");
   if (!health.haveServiceRole) missing.push("SUPABASE_SERVICE_ROLE_KEY");
   if (!env.SITE_URL || env.SITE_URL.length === 0) missing.push("SITE_URL");

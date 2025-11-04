@@ -16,25 +16,44 @@ export async function GET(request: Request) {
   }
 
   const base = await resolveBaseUrl(request);
-  const csMasked = csId.length > 4 ? `${csId.slice(0, 2)}****${csId.slice(-4)}` : csId;
+  const csMasked =
+    csId.length > 4 ? `${csId.slice(0, 2)}****${csId.slice(-4)}` : csId;
 
   // 事前チェック：既に paid の場合はNOP（confirmed は続行して支払い確定へ）
   try {
     const supabase = createSupabaseServiceRoleClient();
     const { data: row } = await supabase
       .from("reservations")
-      .select("id, status, code")
+      .select("id, status, code, pending_expires_at")
       .eq("id", rid)
       .maybeSingle();
 
-    if (row && ((row as any).status === "paid")) {
+    if (row && (row as any).status === "paid") {
       await recordEvent("payment_confirm_attempt", {
         reservation_id: rid,
         result: "noop",
         url_base: base,
         cs_id_masked: csMasked,
       });
-      return NextResponse.json({ status: "ok", message: "already_paid" });
+      return json({ status: "ok", message: "already_paid" }, 200);
+    }
+
+    // TTL expiry check for pending reservations
+    const status = (row as any)?.status as string | undefined;
+    const expiresAt = (row as any)?.pending_expires_at as string | null;
+    if (status === "pending" && expiresAt) {
+      const now = new Date();
+      const exp = new Date(expiresAt);
+      if (exp.getTime() <= now.getTime()) {
+        await recordEvent("payment_confirm_attempt", {
+          reservation_id: rid,
+          result: "failed",
+          reason: "pending_expired",
+          url_base: base,
+          cs_id_masked: csMasked,
+        });
+        return json({ message: "pending_expired" }, 410);
+      }
     }
   } catch (e) {
     // 非致命：事前チェック失敗は続行
@@ -56,9 +75,10 @@ export async function GET(request: Request) {
     ) {
       paid = true;
       amountTotal = session.amount_total ?? null;
-      paymentIntentId = typeof session.payment_intent === "string"
-        ? session.payment_intent
-        : session.payment_intent?.id ?? null;
+      paymentIntentId =
+        typeof session.payment_intent === "string"
+          ? session.payment_intent
+          : (session.payment_intent?.id ?? null);
 
       const reservationIdFromMeta = session.metadata?.reservationId;
       if (reservationIdFromMeta && reservationIdFromMeta !== rid) {
@@ -115,7 +135,11 @@ export async function GET(request: Request) {
     return json({ status: "ok" }, 200);
   } catch (e) {
     const message = e instanceof Error ? e.message : "Unknown error";
-    await recordEvent("stripe.confirm_error", { message, reservation_id: rid, url_base: base });
+    await recordEvent("stripe.confirm_error", {
+      message,
+      reservation_id: rid,
+      url_base: base,
+    });
     if (e instanceof HttpError) {
       return json({ message: e.message }, e.status);
     }

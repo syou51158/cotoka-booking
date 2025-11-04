@@ -28,14 +28,15 @@ import {
 const WEEKDAY_LABELS = ["日", "月", "火", "水", "木", "金", "土"];
 
 export default async function AdminSchedulePage() {
-  const [openingHours, overrides, staff, shifts, services, siteSettings] = await Promise.all([
-    getOpeningHours(),
-    getDateOverrides(),
-    getStaffDirectory(),
-    getShifts({ from: new Date().toISOString() }),
-    getActiveServices(),
-    getSiteSettings(),
-  ]);
+  const [openingHours, overrides, staff, shifts, services, siteSettings] =
+    await Promise.all([
+      getOpeningHours(),
+      getDateOverrides(),
+      getStaffDirectory(),
+      getShifts({ from: new Date().toISOString() }),
+      getActiveServices(),
+      getSiteSettings(),
+    ]);
 
   return (
     <div className="space-y-8">
@@ -53,9 +54,15 @@ export default async function AdminSchedulePage() {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <form action={updateSiteSettingsAction} className="space-y-3 rounded-lg border border-slate-800 bg-slate-950/60 p-4">
+          <form
+            action={updateSiteSettingsAction}
+            className="space-y-3 rounded-lg border border-slate-800 bg-slate-950/60 p-4"
+          >
             <div className="space-y-1">
-              <Label htmlFor="default-slot-interval" className="text-xs text-slate-300">
+              <Label
+                htmlFor="default-slot-interval"
+                className="text-xs text-slate-300"
+              >
                 標準のスロット間隔（分）
               </Label>
               <Input
@@ -68,7 +75,12 @@ export default async function AdminSchedulePage() {
               />
             </div>
             <div className="flex justify-end">
-              <Button type="submit" variant="outline" size="sm" className="border-slate-700 text-slate-200">
+              <Button
+                type="submit"
+                variant="outline"
+                size="sm"
+                className="border-slate-700 text-slate-200"
+              >
                 保存
               </Button>
             </div>
@@ -78,7 +90,9 @@ export default async function AdminSchedulePage() {
 
       <Card className="border-slate-800 bg-slate-900/40">
         <CardHeader>
-          <CardTitle className="text-base text-slate-200">曜日別営業時間</CardTitle>
+          <CardTitle className="text-base text-slate-200">
+            曜日別営業時間
+          </CardTitle>
         </CardHeader>
         <CardContent className="grid gap-4 md:grid-cols-2">
           {WEEKDAY_LABELS.map((label, index) => {
@@ -148,7 +162,9 @@ export default async function AdminSchedulePage() {
 
       <Card className="border-slate-800 bg-slate-900/40">
         <CardHeader>
-          <CardTitle className="text-base text-slate-200">休業日・特別営業</CardTitle>
+          <CardTitle className="text-base text-slate-200">
+            休業日・特別営業
+          </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <form
@@ -204,7 +220,12 @@ export default async function AdminSchedulePage() {
               />
             </div>
             <div className="col-span-full flex justify-end">
-              <Button type="submit" variant="outline" size="sm" className="border-slate-700 text-slate-200">
+              <Button
+                type="submit"
+                variant="outline"
+                size="sm"
+                className="border-slate-700 text-slate-200"
+              >
                 追加
               </Button>
             </div>
@@ -252,7 +273,9 @@ export default async function AdminSchedulePage() {
 
       <Card className="border-slate-800 bg-slate-900/40">
         <CardHeader>
-          <CardTitle className="text-base text-slate-200">スタッフシフト</CardTitle>
+          <CardTitle className="text-base text-slate-200">
+            スタッフシフト
+          </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <form
@@ -335,15 +358,30 @@ export default async function AdminSchedulePage() {
                   <input type="hidden" name="id" value={shift.id} />
                   <div className="text-sm">
                     <span className="text-slate-200">
-                      {staff.find((s) => s.id === shift.staff_id)?.display_name ?? "?"}
+                      {staff.find((s) => s.id === shift.staff_id)
+                        ?.display_name ?? "?"}
                     </span>
                   </div>
                   <div className="text-sm text-slate-300">
-                    {format(new Date(shift.start_at), "M/d(EEE) HH:mm", { locale: ja })} - {format(new Date(shift.end_at), "M/d(EEE) HH:mm", { locale: ja })}
+                    {format(new Date(shift.start_at), "M/d(EEE) HH:mm", {
+                      locale: ja,
+                    })}{" "}
+                    -{" "}
+                    {format(new Date(shift.end_at), "M/d(EEE) HH:mm", {
+                      locale: ja,
+                    })}
                   </div>
-                  <div className="text-xs text-slate-500">{shift.note ?? ""}</div>
+                  <div className="text-xs text-slate-500">
+                    {shift.note ?? ""}
+                  </div>
                   <div className="flex justify-end">
-                    <Button variant="ghost" size="sm" className="text-red-300 hover:bg-red-500/10">削除</Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="text-red-300 hover:bg-red-500/10"
+                    >
+                      削除
+                    </Button>
                   </div>
                 </form>
               ))
@@ -354,7 +392,9 @@ export default async function AdminSchedulePage() {
 
       <Card className="border-slate-800 bg-slate-900/40">
         <CardHeader>
-          <CardTitle className="text-base text-slate-200">メニュー別スロット間隔</CardTitle>
+          <CardTitle className="text-base text-slate-200">
+            メニュー別スロット間隔
+          </CardTitle>
         </CardHeader>
         <CardContent className="space-y-2">
           {services.length === 0 ? (
@@ -367,8 +407,12 @@ export default async function AdminSchedulePage() {
                 className="grid grid-cols-1 items-center gap-2 rounded-lg border border-slate-800 bg-slate-950/60 p-4 md:grid-cols-4"
               >
                 <input type="hidden" name="service_id" value={service.id} />
-                <div className="text-sm font-medium text-slate-200">{service.name}</div>
-                <div className="text-xs text-slate-400">{service.duration_min}分 / ¥{service.price_jpy}</div>
+                <div className="text-sm font-medium text-slate-200">
+                  {service.name}
+                </div>
+                <div className="text-xs text-slate-400">
+                  {service.duration_min}分 / ¥{service.price_jpy}
+                </div>
                 <div>
                   <Input
                     name="slot_interval_min"
@@ -380,7 +424,12 @@ export default async function AdminSchedulePage() {
                   />
                 </div>
                 <div className="flex justify-end gap-2">
-                  <Button type="submit" variant="outline" size="sm" className="border-slate-700 text-slate-200">
+                  <Button
+                    type="submit"
+                    variant="outline"
+                    size="sm"
+                    className="border-slate-700 text-slate-200"
+                  >
                     保存
                   </Button>
                 </div>
@@ -392,7 +441,9 @@ export default async function AdminSchedulePage() {
 
       <Card className="border-slate-800 bg-slate-900/40">
         <CardHeader>
-          <CardTitle className="text-base text-slate-200">スタッフ別スロット間隔</CardTitle>
+          <CardTitle className="text-base text-slate-200">
+            スタッフ別スロット間隔
+          </CardTitle>
         </CardHeader>
         <CardContent className="space-y-2">
           {staff.length === 0 ? (
@@ -405,8 +456,12 @@ export default async function AdminSchedulePage() {
                 className="grid grid-cols-1 items-center gap-2 rounded-lg border border-slate-800 bg-slate-950/60 p-4 md:grid-cols-4"
               >
                 <input type="hidden" name="staff_id" value={member.id} />
-                <div className="text-sm font-medium text-slate-200">{member.display_name}</div>
-                <div className="text-xs text-slate-400">{member.email ?? ""}</div>
+                <div className="text-sm font-medium text-slate-200">
+                  {member.display_name}
+                </div>
+                <div className="text-xs text-slate-400">
+                  {member.email ?? ""}
+                </div>
                 <div>
                   <Input
                     name="slot_interval_min"
@@ -418,7 +473,12 @@ export default async function AdminSchedulePage() {
                   />
                 </div>
                 <div className="flex justify-end gap-2">
-                  <Button type="submit" variant="outline" size="sm" className="border-slate-700 text-slate-200">
+                  <Button
+                    type="submit"
+                    variant="outline"
+                    size="sm"
+                    className="border-slate-700 text-slate-200"
+                  >
                     保存
                   </Button>
                 </div>
