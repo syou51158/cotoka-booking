@@ -8,21 +8,21 @@ export const MIN_HOURS_BEFORE_BOOKING = 3;
 
 export const BOOKING_CONTACT_OPTIONS = ["email", "phone"] as const;
 export const SALON_LOCATION_TEXT =
-  "京都市中京区・烏丸御池　エレベーターを降りて右後ろ／704号室";
+  "烏丸御池駅 6番出口から徒歩1分／エスメラルダ704号室";
 
 // --- 店舗情報（トップページ & JSON-LD 共用） ---
 export const SALON_NAME = SITE_NAME;
 export const SALON_ADDRESS = {
-  streetAddress: "京都市中京区 烏丸御池 704号室",
-  addressLocality: "京都市",
+  streetAddress: "場之町596 エスメラルダ 704号室",
+  addressLocality: "京都市中京区",
   addressRegion: "京都府",
-  postalCode: "604-0000",
+  postalCode: "604-8172",
   addressCountry: "JP",
 };
 export const SALON_PHONE = process.env.NEXT_PUBLIC_SALON_PHONE ?? ""; // 実番号がある場合は .env で設定
 export const SALON_MAP_URL =
   process.env.NEXT_PUBLIC_SALON_MAP_URL ??
-  "https://maps.app.goo.gl/4i7d4gRZdVhtzK4w7";
+  "https://maps.app.goo.gl/ryN3rccBSiaD6FSR8";
 export const SALON_PRICE_RANGE = "¥¥";
 
 // 営業時間（例: 毎日 10:00-20:00）。JSON-LDでは OpeningHoursSpecification に展開。

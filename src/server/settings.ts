@@ -37,13 +37,15 @@ async function withTimeout<T>(p: PromiseLike<T>, ms = 2500): Promise<T> {
     const t = setTimeout(() => {
       reject(new Error(`Operation timeout after ${ms}ms`));
     }, ms);
-    p.then((v) => {
-      clearTimeout(t);
-      resolve(v);
-    }).catch((e) => {
-      clearTimeout(t);
-      reject(e);
-    });
+    Promise.resolve(p)
+      .then((v) => {
+        clearTimeout(t);
+        resolve(v);
+      })
+      .catch((e: unknown) => {
+        clearTimeout(t);
+        reject(e instanceof Error ? e : new Error(String(e)));
+      });
   });
 }
 
@@ -120,17 +122,17 @@ export async function getBusinessProfile({
     if (error) throw error;
     if (!data) return DEFAULTS;
 
-    const row = data as SalonRow;
+    const row = data as any;
     const profile: BusinessProfile = {
       id: 1,
       salon_name: row.name ?? DEFAULTS.salon_name,
       address_ja: row.address ?? DEFAULTS.address_ja,
-      address_en: DEFAULTS.address_en,
-      address_zh: DEFAULTS.address_zh,
+      address_en: row.address_en ?? DEFAULTS.address_en,
+      address_zh: row.address_zh ?? DEFAULTS.address_zh,
       phone: row.phone ?? DEFAULTS.phone,
-      email_from: DEFAULTS.email_from,
-      website_url: DEFAULTS.website_url,
-      map_url: DEFAULTS.map_url,
+      email_from: row.email ?? DEFAULTS.email_from,
+      website_url: row.website_url ?? DEFAULTS.website_url,
+      map_url: row.map_url ?? DEFAULTS.map_url,
       timezone: DEFAULTS.timezone,
       default_locale: DEFAULTS.default_locale,
       currency: DEFAULTS.currency,
@@ -206,7 +208,12 @@ export async function updateBusinessProfile(
     .update({
       name: next.salon_name,
       address: next.address_ja ?? null,
+      address_en: next.address_en ?? null,
+      address_zh: next.address_zh ?? null,
       phone: next.phone ?? null,
+      email: next.email_from ?? null,
+      website_url: next.website_url ?? null,
+      map_url: next.map_url ?? null,
       updated_at: next.updated_at,
     })
     .eq("salon_id", 1)

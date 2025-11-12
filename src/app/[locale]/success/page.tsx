@@ -184,7 +184,7 @@ export default async function SuccessPage({ params, searchParams }: Props) {
             </p>
             <p>{addressLine}</p>
             <p>
-              烏丸御池駅の改札を出てエレベーターで7階へ。エレベーターを降りて右後ろ側の704号室です。
+              マクドナルドと同じ建物です。右側の入口から入り、奥のエレベーターで7Fへ。704号室までお越しください。
             </p>
             <div className="mt-3 flex flex-col gap-2 sm:flex-row">
               <Button asChild className="w-full sm:w-auto">

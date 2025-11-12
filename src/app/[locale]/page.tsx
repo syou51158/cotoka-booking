@@ -12,12 +12,11 @@ import { formatCurrency, formatDuration } from "@/lib/format";
 import {
   DEFAULT_LOCALE,
   FALLBACK_SERVICES,
-  SALON_NAME,
   SALON_MAP_URL,
   SALON_OPENING_HOURS,
-  SALON_ADDRESS,
   CANCEL_POLICY_TEXT,
 } from "@/lib/config";
+import { getBusinessProfile } from "@/server/settings";
 
 interface Props {
   params: Promise<{ locale: string }>;
@@ -26,6 +25,15 @@ interface Props {
 export default async function TopPage({ params }: Props) {
   const resolved = await params;
   const locale = resolved.locale || DEFAULT_LOCALE;
+  const profile = await getBusinessProfile();
+  const siteName = profile.salon_name ?? "Cotoka";
+  const addressLine =
+    locale === "en"
+      ? (profile.address_en ?? profile.address_ja ?? "")
+      : locale === "zh"
+        ? (profile.address_zh ?? profile.address_ja ?? "")
+        : (profile.address_ja ?? profile.address_en ?? profile.address_zh ?? "");
+  const mapUrl = profile.map_url ?? SALON_MAP_URL;
 
   // メニュー&価格: services API を優先、空なら config のフォールバック
   let services: Array<{
@@ -56,11 +64,9 @@ export default async function TopPage({ params }: Props) {
       {/* Hero */}
       <section className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div className="space-y-2">
-          <h1 className="text-3xl font-semibold text-slate-900">
-            {SALON_NAME}
-          </h1>
+          <h1 className="text-3xl font-semibold text-slate-900">{siteName}</h1>
           <p className="text-sm text-slate-600">
-            烏丸御池駅直結・704号室。エレベーターを降りて右後ろへお進みください。
+            烏丸御池駅 6番出口から徒歩1分。マクドナルドと同じ建物、右側入口→奥のエレベーターで7F→704号室。
           </p>
         </div>
         <div className="flex flex-col gap-2 sm:flex-row">
@@ -72,7 +78,7 @@ export default async function TopPage({ params }: Props) {
             variant="outline"
             className="w-full sm:w-auto text-base py-6"
           >
-            <a href={SALON_MAP_URL} target="_blank" rel="noopener">
+            <a href={mapUrl} target="_blank" rel="noopener">
               地図で確認
             </a>
           </Button>
@@ -141,15 +147,12 @@ export default async function TopPage({ params }: Props) {
         <h2 className="text-2xl font-semibold text-slate-900">アクセス</h2>
         <Card>
           <CardContent className="py-5 space-y-2 text-sm text-slate-700">
-            <p>
-              住所：{SALON_ADDRESS.streetAddress}（
-              {SALON_ADDRESS.addressLocality}、{SALON_ADDRESS.addressRegion}）
-            </p>
-            <p>最寄り：烏丸御池駅 直結</p>
-            <p>メモ：エレベーターを降りて右後ろ／704号室</p>
+            <p>住所：{addressLine}</p>
+            <p>最寄り：烏丸御池駅 6番出口から徒歩1分</p>
+            <p>メモ：マクドナルドと同じ建物。右側入口→奥のエレベーターで7F→704号室</p>
             <div className="pt-2">
               <Button asChild variant="secondary" className="w-full sm:w-auto">
-                <a href={SALON_MAP_URL} target="_blank" rel="noopener">
+                <a href={mapUrl} target="_blank" rel="noopener">
                   Googleマップで見る
                 </a>
               </Button>

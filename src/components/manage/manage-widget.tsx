@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { formatDisplay } from "@/lib/time";
 import type { Dictionary } from "@/i18n/dictionaries";
+import { XCircle, CheckCircle2, Loader2 } from "lucide-react";
 
 type ManageDictionary = Dictionary["manage"];
 
@@ -45,6 +46,7 @@ export default function ManageReservationWidget({
     null,
   );
   const [loading, setLoading] = useState(false);
+  const [canceling, setCanceling] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [stripeUrl, setStripeUrl] = useState<string | null>(null);
@@ -114,6 +116,7 @@ export default function ManageReservationWidget({
   async function handleCancel() {
     if (!reservation) return;
     setLoading(true);
+    setCanceling(true);
     setError(null);
     setMessage(null);
     try {
@@ -135,6 +138,7 @@ export default function ManageReservationWidget({
       setError(err instanceof Error ? err.message : "キャンセルに失敗しました");
     } finally {
       setLoading(false);
+      setCanceling(false);
     }
   }
 
@@ -144,10 +148,10 @@ export default function ManageReservationWidget({
     setError(null);
     setMessage(null);
     try {
-      const response = await fetch("/api/stripe/checkout", {
+      const response = await fetch("/api/reservations/checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ reservationId: reservation.id }),
+        body: JSON.stringify({ rid: reservation.id }),
       });
       if (!response.ok) {
         const data = await response.json().catch(() => ({}));
@@ -158,6 +162,7 @@ export default function ManageReservationWidget({
       }
       const payload = await response.json();
       const url: string | undefined =
+        (payload?.checkoutUrl as string | undefined) ??
         (payload?.data?.url as string | undefined) ??
         (payload?.url as string | undefined);
       if (url) {
@@ -234,9 +239,16 @@ export default function ManageReservationWidget({
           {error}
         </div>
       ) : null}
+      {canceling ? (
+        <div className="flex items-start gap-2 rounded border border-amber-200 bg-amber-50 p-4 text-amber-800" role="status" aria-live="polite">
+          <Loader2 className="h-5 w-5 animate-spin" aria-hidden="true" />
+          <div className="text-sm font-medium">キャンセル処理中です。しばらくお待ちください…</div>
+        </div>
+      ) : null}
       {message ? (
-        <div className="rounded border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-600">
-          {message}
+        <div className="flex items-start gap-2 rounded border border-emerald-200 bg-emerald-50 p-4 text-emerald-700" role="status" aria-live="polite">
+          <CheckCircle2 className="h-5 w-5" aria-hidden="true" />
+          <div className="text-sm font-medium">{message}</div>
         </div>
       ) : null}
 
@@ -265,12 +277,55 @@ export default function ManageReservationWidget({
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4 text-sm text-slate-600">
+            {reservation.status === "canceled" ? (
+              <div className="flex items-start justify-between gap-3 rounded border border-red-200 bg-red-50 p-4 text-red-700">
+                <div className="flex items-start gap-2">
+                  <XCircle className="h-5 w-5" aria-hidden="true" />
+                  <div>
+                    <p className="text-sm font-semibold">この予約はキャンセル済みです</p>
+                    <p className="text-xs">再予約をご希望の場合は、メニュー一覧から新しくご予約ください。</p>
+                  </div>
+                </div>
+                <Button asChild variant="outline" className="border-red-300 text-red-700 hover:bg-red-100">
+                  <a href={`/${locale}#services`} aria-label="再予約へ">
+                    再予約へ
+                  </a>
+                </Button>
+              </div>
+            ) : null}
             <div className="grid gap-2 md:grid-cols-2">
               <div>
                 <span className="font-semibold text-slate-500">
                   {dict.statusLabel}
                 </span>
-                <p className="text-slate-900">{reservation.status}</p>
+                <p className="mt-1">
+                  <span
+                    className={`${
+                      reservation.status === "canceled"
+                        ? "bg-red-100 text-red-700 border border-red-200"
+                        : reservation.status === "confirmed"
+                          ? "bg-blue-100 text-blue-700 border border-blue-200"
+                          : reservation.status === "paid"
+                            ? "bg-emerald-100 text-emerald-700 border border-emerald-200"
+                            : reservation.status === "pending" || reservation.status === "unpaid"
+                              ? "bg-amber-100 text-amber-800 border border-amber-200"
+                              : "bg-slate-100 text-slate-700 border border-slate-200"
+                    } inline-flex items-center rounded px-2 py-0.5 text-xs font-semibold`}
+                    aria-label="予約ステータス"
+                  >
+                    {reservation.status === "canceled"
+                      ? "キャンセル済み"
+                      : reservation.status === "confirmed"
+                        ? "予約確定"
+                        : reservation.status === "paid"
+                          ? "支払い済み"
+                          : reservation.status === "pending"
+                            ? "仮予約"
+                            : reservation.status === "unpaid"
+                              ? "未決済"
+                              : reservation.status}
+                  </span>
+                </p>
               </div>
               <div>
                 <span className="font-semibold text-slate-500">日付</span>
@@ -359,25 +414,32 @@ export default function ManageReservationWidget({
               </div>
             </form>
 
-            <div className="rounded border border-red-100 bg-red-50 p-4">
-              <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-                <div>
-                  <p className="text-sm font-semibold text-red-700">
-                    {dict.cancelTitle}
-                  </p>
-                  <p className="text-xs text-red-500">
-                    キャンセル期限やポリシーを事前にご確認ください。
-                  </p>
+            {(["paid", "confirmed"] as string[]).includes(
+              reservation.status,
+            ) ? (
+              <div className="rounded border border-red-100 bg-red-50 p-4" aria-busy={canceling}>
+                <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                  <div>
+                    <p className="text-sm font-semibold text-red-700">
+                      {dict.cancelTitle}
+                    </p>
+                    <p className="text-xs text-red-500">
+                      キャンセル期限やポリシーを事前にご確認ください。
+                    </p>
+                  </div>
+                  <Button onClick={handleCancel} variant="destructive" disabled={loading || canceling} aria-live="polite">
+                    {canceling ? (
+                      <>
+                        <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+                        キャンセル中…
+                      </>
+                    ) : (
+                      <>{dict.cancelAction}</>
+                    )}
+                  </Button>
                 </div>
-                <Button
-                  onClick={handleCancel}
-                  variant="destructive"
-                  disabled={loading || reservation.status === "canceled"}
-                >
-                  {dict.cancelAction}
-                </Button>
               </div>
-            </div>
+            ) : null}
           </CardContent>
         </Card>
       ) : null}

@@ -145,8 +145,12 @@ const dictionaries = {
         },
         location: {
           title: "アクセス",
-          address: "〒150-0001 東京都渋谷区神宮前1-1-1",
-          directions: "JR原宿駅より徒歩3分",
+          address:
+            "〒604-8172 京都府京都市中京区場之町596 エスメラルダ 704号室",
+          directions: "烏丸御池駅 6番出口から徒歩1分",
+          instructions:
+            "マクドナルドと同じ建物です。右側の入口から入り、奥のエレベーターで7Fへ。704号室までお越しください。",
+          mapLinkText: "Googleマップを開く",
         },
         calendar: {
           title: "カレンダーに追加",
@@ -351,9 +355,13 @@ const dictionaries = {
           status: "Status",
         },
         location: {
-          title: "Location",
-          address: "1-1-1 Jingumae, Shibuya-ku, Tokyo 150-0001",
-          directions: "3 minutes walk from JR Harajuku Station",
+          title: "Access",
+          address:
+            "Room 704, Esmeralda Bldg, 596 Ban-no-cho, Nakagyo-ku, Kyoto 604-8172",
+          directions: "1 minute from Karasuma Oike Station (Exit 6)",
+          instructions:
+            "Same building as McDonald's. Enter from the right-side entrance, take the elevator at the back to 7F, and come to Room 704.",
+          mapLinkText: "Open in Google Maps",
         },
         calendar: {
           title: "Add to Calendar",
@@ -555,9 +563,13 @@ const dictionaries = {
           status: "狀態",
         },
         location: {
-          title: "地址",
-          address: "〒150-0001 東京都渋谷区神宮前1-1-1",
-          directions: "JR原宿站步行3分鐘",
+          title: "交通資訊",
+          address:
+            "〒604-8172 京都府京都市中京區場之町596 Esmeralda 大樓 704 室",
+          directions: "烏丸御池站 6 號出口步行1分鐘",
+          instructions:
+            "與麥當勞同一棟大樓。請由右側入口進入，往內走有電梯，搭乘至7樓後至704室。",
+          mapLinkText: "在 Google 地圖打開",
         },
         calendar: {
           title: "加入行事曆",

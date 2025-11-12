@@ -1,78 +1,51 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { createSupabaseServiceRoleClient } from "@/lib/supabase";
-import { normalizePhone } from "@/server/reservations";
-import { recordEvent } from "@/server/events";
+import { lookupReservationByCode } from "@/server/reservations";
 
 const schema = z.object({
-  code: z.string().min(6),
-  contact: z.string().min(3),
+  code: z.string().min(1),
+  contact: z.string().min(1),
 });
 
 export async function POST(request: Request) {
   try {
-    const payload = await request.json();
-    const { code, contact } = schema.parse(payload);
-    const supabase = createSupabaseServiceRoleClient();
-    const normalizedEmail = contact.includes("@")
-      ? contact.trim().toLowerCase()
-      : null;
-    const normalizedPhoneRaw = normalizePhone(contact);
-    const normalizedPhone =
-      normalizedPhoneRaw.length > 0 ? normalizedPhoneRaw : null;
+    const json = await request.json();
+    const { code, contact } = schema.parse(json);
 
-    if (!normalizedEmail && !normalizedPhone) {
+    const row = await lookupReservationByCode(code, contact);
+    if (!row) {
       return NextResponse.json(
-        { message: "予約が見つかりませんでした" },
+        { message: "予約が見つかりません" },
         { status: 404 },
       );
     }
 
-    let query = supabase
-      .from("reservations")
-      .select(
-        "id, code, status, amount_total_jpy, customer_name, customer_email, customer_phone, notes, start_at, end_at, service:service_id(name,requires_prepayment), staff:staff_id(display_name)",
-      )
-      .eq("code", code)
-      .in("status", ["unpaid", "pending", "confirmed", "paid"]);
+    const payload = {
+      id: (row as any).id as string,
+      code: (row as any).code as string,
+      status: (row as any).status as string,
+      amount_total_jpy: (row as any).amount_total_jpy as number | undefined,
+      customer_name: (row as any).customer_name as string,
+      customer_email: (row as any).customer_email ?? null,
+      customer_phone: (row as any).customer_phone ?? null,
+      notes: (row as any).notes ?? null,
+      start_at: (row as any).start_at as string,
+      end_at: (row as any).end_at as string,
+      service: {
+        name: (row as any)?.service?.name ?? null,
+      },
+      staff: {
+        display_name: (row as any)?.staff?.display_name ?? null,
+      },
+    };
 
-    if (normalizedEmail && normalizedPhone) {
-      query = query.or(
-        `customer_email.eq.${normalizedEmail},customer_phone.eq.${normalizedPhone}`,
-      );
-    } else if (normalizedEmail) {
-      query = query.eq("customer_email", normalizedEmail);
-    } else if (normalizedPhone) {
-      query = query.eq("customer_phone", normalizedPhone);
-    }
-
-    const { data, error } = await query.limit(1).maybeSingle();
-
-    if (error) {
-      throw error;
-    }
-
-    if (!data) {
-      return NextResponse.json(
-        { message: "予約が見つかりませんでした" },
-        { status: 404 },
-      );
-    }
-
-    await recordEvent("manage_lookup", {
-      reservation_id: data.id,
-      code: data.code,
-    });
-
-    return NextResponse.json(data);
+    return NextResponse.json(payload, { status: 200 });
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json({ message: error.message }, { status: 400 });
     }
-    console.error("Manage lookup failed", error);
-    return NextResponse.json(
-      { message: "Internal Server Error" },
-      { status: 500 },
-    );
+    const message =
+      error instanceof Error ? error.message : "Internal Server Error";
+    return NextResponse.json({ message }, { status: 500 });
   }
 }
