@@ -19,6 +19,7 @@ import LocaleSwitcher from "@/components/locale-switcher";
 import SentryInit from "@/components/sentry-init";
 import Toaster from "@/components/ui/toaster";
 import ActiveHoldBanner from "@/components/ActiveHoldBanner";
+import { ConditionalHeader, ConditionalFooter } from "@/components/layout/conditional-layout";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -33,12 +34,12 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: `${SITE_NAME} | Booking`,
   description:
-    "Cotoka Relax & Beauty SPA (烏丸御池) のオンライン予約・決済ポータル",
+    `${SITE_NAME} (烏丸御池) のオンライン予約・決済ポータル`,
   metadataBase: new URL(SITE_URL),
   openGraph: {
     title: SITE_NAME,
     description:
-      "烏丸御池・704号室のリラクゼーションサロン。オンラインで予約から決済まで完結。",
+      `${SITE_NAME} - 烏丸御池・704号室のリラクゼーションサロン。オンラインで予約から決済まで完結。`,
     url: SITE_URL,
     siteName: SITE_NAME,
     locale: "ja_JP",
@@ -101,7 +102,7 @@ export default async function RootLayout({
           longitude: 135.7631,
         },
         priceRange: SALON_PRICE_RANGE,
-        sameAs: ["https://maps.google.com/?q=Cotoka+Relax+%26+Beauty+SPA"],
+        sameAs: [`https://maps.google.com/?q=${encodeURIComponent(SITE_NAME)}`],
       },
       {
         "@type": "Service",
@@ -133,97 +134,101 @@ export default async function RootLayout({
         {/* Browser側でSentry初期化 */}
         <SentryInit />
         <div className="flex min-h-screen flex-col">
-          <header className="border-b bg-white/80 backdrop-blur">
-            <div className="mx-auto flex w-full max-w-5xl items-center justify-between px-4 py-3">
-              <Link
-                href={`/${DEFAULT_LOCALE}/booking`}
-                className="text-lg font-semibold tracking-tight"
-              >
-                {siteName}
-              </Link>
-              <div className="flex flex-col items-end gap-1 sm:flex-row sm:items-center sm:gap-3">
-                <div className="order-3 text-right text-xs text-slate-500 sm:order-1">
-                  {addressLine || SALON_LOCATION_TEXT}
-                </div>
+          <ConditionalHeader>
+            <header className="border-b bg-white/80 backdrop-blur">
+              <div className="mx-auto flex w-full max-w-5xl items-center justify-between px-4 py-3">
                 <Link
-                  href={`/${DEFAULT_LOCALE}/manage`}
-                  className="order-2 text-sm text-slate-600 hover:text-slate-800 underline-offset-2 hover:underline sm:order-2"
+                  href={`/${DEFAULT_LOCALE}/booking`}
+                  className="text-lg font-semibold tracking-tight"
                 >
-                  予約を確認する
+                  {siteName}
                 </Link>
-                <Button
-                  asChild
-                  className="order-1 inline-flex text-sm py-2 px-3 sm:order-3"
-                >
-                  <Link href={`/${DEFAULT_LOCALE}/booking`}>Web予約</Link>
-                </Button>
-                <div className="order-4 sm:order-4">
-                  {showLocaleSwitcher ? (
-                    <LocaleSwitcher currentLocale={locale} />
-                  ) : null}
+                <div className="flex flex-col items-end gap-1 sm:flex-row sm:items-center sm:gap-3">
+                  <div className="order-3 text-right text-xs text-slate-500 sm:order-1">
+                    {addressLine || SALON_LOCATION_TEXT}
+                  </div>
+                  <Link
+                    href={`/${DEFAULT_LOCALE}/manage`}
+                    className="order-2 text-sm text-slate-600 hover:text-slate-800 underline-offset-2 hover:underline sm:order-2"
+                  >
+                    予約を確認する
+                  </Link>
+                  <Button
+                    asChild
+                    className="order-1 inline-flex text-sm py-2 px-3 sm:order-3"
+                  >
+                    <Link href={`/${DEFAULT_LOCALE}/booking`}>Web予約</Link>
+                  </Button>
+                  <div className="order-4 sm:order-4">
+                    {showLocaleSwitcher ? (
+                      <LocaleSwitcher currentLocale={locale} />
+                    ) : null}
+                  </div>
                 </div>
               </div>
-            </div>
-          </header>
+            </header>
+          </ConditionalHeader>
           <ActiveHoldBanner />
           <main className="mx-auto w-full max-w-5xl flex-1 px-4">
             {children}
           </main>
-          <footer className="border-t bg-white/80 backdrop-blur">
-            <div className="mx-auto w-full max-w-5xl px-4 py-8">
-              <div className="grid gap-8 text-sm text-slate-600 sm:grid-cols-3">
-                <div>
-                  <Link
-                    href={`/${DEFAULT_LOCALE}/booking`}
-                    className="text-base font-semibold text-slate-900"
-                  >
-                    {siteName}
-                  </Link>
-                  <div className="mt-2 text-xs text-slate-500">
-                    {addressLine || SALON_LOCATION_TEXT}
+          <ConditionalFooter>
+            <footer className="border-t bg-white/80 backdrop-blur">
+              <div className="mx-auto w-full max-w-5xl px-4 py-8">
+                <div className="grid gap-8 text-sm text-slate-600 sm:grid-cols-3">
+                  <div>
+                    <Link
+                      href={`/${DEFAULT_LOCALE}/booking`}
+                      className="text-base font-semibold text-slate-900"
+                    >
+                      {siteName}
+                    </Link>
+                    <div className="mt-2 text-xs text-slate-500">
+                      {addressLine || SALON_LOCATION_TEXT}
+                    </div>
+                  </div>
+                  <div />
+                  <div>
+                    <div className="text-xs uppercase tracking-wide text-slate-500">
+                      サポート
+                    </div>
+                    <ul className="mt-3 space-y-2">
+                      <li>
+                        <Link
+                          href={`/${DEFAULT_LOCALE}/manage`}
+                          className="hover:text-slate-900"
+                        >
+                          予約を確認する
+                        </Link>
+                      </li>
+                      <li>
+                        <Link
+                          href={`/${DEFAULT_LOCALE}#cancel-policy`}
+                          className="hover:text-slate-900"
+                        >
+                          キャンセルポリシー
+                        </Link>
+                      </li>
+                      <li>
+                        <Link
+                          href={`/${DEFAULT_LOCALE}#access`}
+                          className="hover:text-slate-900"
+                        >
+                          アクセス
+                        </Link>
+                      </li>
+                    </ul>
                   </div>
                 </div>
-                <div />
-                <div>
-                  <div className="text-xs uppercase tracking-wide text-slate-500">
-                    サポート
-                  </div>
-                  <ul className="mt-3 space-y-2">
-                    <li>
-                      <Link
-                        href={`/${DEFAULT_LOCALE}/manage`}
-                        className="hover:text-slate-900"
-                      >
-                        予約を確認する
-                      </Link>
-                    </li>
-                    <li>
-                      <Link
-                        href={`/${DEFAULT_LOCALE}#cancel-policy`}
-                        className="hover:text-slate-900"
-                      >
-                        キャンセルポリシー
-                      </Link>
-                    </li>
-                    <li>
-                      <Link
-                        href={`/${DEFAULT_LOCALE}#access`}
-                        className="hover:text-slate-900"
-                      >
-                        アクセス
-                      </Link>
-                    </li>
-                  </ul>
+                <div className="mt-8 flex items-center justify-between border-t pt-3 text-xs text-slate-500">
+                  <Link href={`/${DEFAULT_LOCALE}/booking`}>{siteName}</Link>
+                  <span>
+                    © {new Date().getFullYear()} {siteName}
+                  </span>
                 </div>
               </div>
-              <div className="mt-8 flex items-center justify-between border-t pt-3 text-xs text-slate-500">
-                <Link href={`/${DEFAULT_LOCALE}/booking`}>{siteName}</Link>
-                <span>
-                  © {new Date().getFullYear()} {siteName}
-                </span>
-              </div>
-            </div>
-          </footer>
+            </footer>
+          </ConditionalFooter>
         </div>
         <Toaster />
         <script

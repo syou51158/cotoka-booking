@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { sendSmtp, isSmtpConfigured } from "@/server/email/smtp";
 import { sendEmailWithRetry } from "@/server/notifications";
 import { getBusinessProfile } from "@/server/settings";
+import { SITE_NAME } from "@/lib/config";
 
 const isDevAllowed = process.env.ALLOW_DEV_MOCKS === "true";
 
@@ -16,7 +17,7 @@ export async function GET(request: NextRequest) {
   try {
     const url = new URL(request.url);
     const to = url.searchParams.get("to");
-    const subject = url.searchParams.get("subject") || "Cotoka テストメール";
+    const subject = url.searchParams.get("subject") || `${SITE_NAME} テストメール`;
     const html = url.searchParams.get("html") || "ok";
     const profile = await getBusinessProfile();
 

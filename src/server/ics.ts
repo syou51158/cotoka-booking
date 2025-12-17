@@ -1,5 +1,6 @@
 import { formatInTimeZone } from "date-fns-tz";
 import { nanoid } from "nanoid";
+import { SITE_NAME } from "@/lib/config";
 
 interface MakeIcsArgs {
   title: string;
@@ -41,7 +42,7 @@ export function makeIcs({
 }: MakeIcsArgs) {
   const startDate = toDate(start);
   const endDate = toDate(end);
-  const uid = `${nanoid()}@cotoka-booking`;
+  const uid = `${nanoid()}@${SITE_NAME.toLowerCase().replace(/\s+/g, '-')}-booking`;
   const dtStamp = toUtcString(new Date());
   const dtStart = toUtcString(startDate);
   const dtEnd = toUtcString(endDate);
@@ -49,7 +50,7 @@ export function makeIcs({
   const body = [
     "BEGIN:VCALENDAR",
     "VERSION:2.0",
-    "PRODID:-//Cotoka Relax & Beauty SPA//Booking//JP",
+    `PRODID:-//${SITE_NAME.replace(/\s+/g, '')}//Booking//JP`,
     "CALSCALE:GREGORIAN",
     "METHOD:PUBLISH",
     "BEGIN:VEVENT",

@@ -1,9 +1,10 @@
 import type { SupportedLocale } from "@/lib/config";
+import { SITE_NAME } from "@/lib/config";
 
 const dictionaries = {
   ja: {
     common: {
-      siteName: "Cotoka Relax & Beauty SPA",
+      siteName: SITE_NAME,
       bookingFlow: "ご予約",
       continue: "続ける",
       back: "戻る",

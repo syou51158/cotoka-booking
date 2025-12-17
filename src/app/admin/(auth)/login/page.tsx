@@ -19,11 +19,11 @@ async function loginAction(formData: FormData) {
   }
 }
 
-export default async function AdminLoginPage({
-  searchParams,
-}: {
-  searchParams?: { error?: string };
+export default async function AdminLoginPage(props: {
+  searchParams?: Promise<{ error?: string }>;
 }) {
+  const searchParams = await props.searchParams;
+
   if (await isAdminAuthenticated()) {
     redirect("/admin");
   }

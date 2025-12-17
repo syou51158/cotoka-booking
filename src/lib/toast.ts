@@ -29,3 +29,16 @@ export function subscribeToast(
     listeners.delete(listener);
   };
 }
+
+// 互換用のシンプルなトーストヘルパー
+export const toast = {
+  success(description: string, title?: string) {
+    showToast({ variant: "success", description, title });
+  },
+  error(description: string, title?: string) {
+    showToast({ variant: "error", description, title });
+  },
+  info(description: string, title?: string) {
+    showToast({ variant: "info", description, title });
+  },
+};

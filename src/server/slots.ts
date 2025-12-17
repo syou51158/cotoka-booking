@@ -1,4 +1,4 @@
-import type { SupabaseClient } from "@supabase/supabase-js";
+// Use loosely typed client to avoid TS mismatches with generated types
 import { addMinutes, areIntervalsOverlapping, max, min } from "date-fns";
 import { formatInTimeZone } from "date-fns-tz";
 import { MIN_HOURS_BEFORE_BOOKING, TIMEZONE } from "@/lib/config";
@@ -24,6 +24,14 @@ type ReservationJoined = Database["public"]["Tables"]["reservations"]["Row"] & {
 type StaffServiceJoined = {
   staff_id: string;
   staff: Database["public"]["Tables"]["staff"]["Row"] | null;
+};
+
+type StaffBlockRow = {
+  id: string;
+  staff_id: string;
+  start_at: string;
+  end_at: string;
+  block_type: "task" | "break" | "walk_in";
 };
 
 interface SlotParams {
@@ -68,7 +76,7 @@ function expandInterval(
 }
 
 async function resolveSlotInterval(
-  client: SupabaseClient<Database>,
+  client: any,
   {
     service,
     staffId,
@@ -110,7 +118,7 @@ export async function getAvailableSlots({
   date,
   staffId,
 }: SlotParams) {
-  const client = createSupabaseServiceRoleClient();
+  const client = createSupabaseServiceRoleClient() as any;
   const serviceRes = await client
     .from("services")
     .select("*")
@@ -198,6 +206,18 @@ export async function getAvailableSlots({
   }
   const reservationsData = (reservationsRaw ?? []) as ReservationJoined[];
 
+  const { data: blocksRaw, error: blocksError } = await client
+    .from("staff_blocks")
+    .select("id, staff_id, start_at, end_at, block_type")
+    .in("staff_id", staffIds)
+    .gte("start_at", dayStartUtc)
+    .lte("start_at", dayEndUtc);
+
+  if (blocksError) {
+    throw blocksError;
+  }
+  const blocksData = (blocksRaw ?? []) as StaffBlockRow[];
+
   const now = new Date();
   const minLeadDate = addMinutes(now, MIN_HOURS_BEFORE_BOOKING * 60);
 
@@ -210,6 +230,12 @@ export async function getAvailableSlots({
     const staffReservations = (reservationsData ?? []).filter(
       (reservation) => reservation.staff_id === sid,
     );
+    let staffBlocks = (blocksData ?? []).filter((b) => b.staff_id === sid);
+    if (!staffBlocks || staffBlocks.length === 0) {
+      staffBlocks = staffShifts
+        .filter((s: any) => typeof s.note === "string" && s.note.length > 0)
+        .map((s: any) => ({ id: s.id, staff_id: s.staff_id, start_at: s.start_at, end_at: s.end_at, block_type: "task" as const }));
+    }
 
     const workingWindows =
       staffShifts.length > 0
@@ -259,7 +285,17 @@ export async function getAvailableSlots({
           );
         });
 
-        if (!overlapsReservation && padded.start >= minLeadDate) {
+        const overlapsBlock = staffBlocks.some((block) => {
+          const bs = new Date(block.start_at);
+          const be = new Date(block.end_at);
+          return areIntervalsOverlapping(
+            { start: padded.start, end: padded.end },
+            { start: bs, end: be },
+            { inclusive: false },
+          );
+        });
+
+        if (!overlapsReservation && !overlapsBlock && padded.start >= minLeadDate) {
           slots.push({
             staffId: sid,
             start: formatLocalIso(cursor),
@@ -275,10 +311,7 @@ export async function getAvailableSlots({
   return slots;
 }
 
-async function getStaffIdsForService(
-  client: SupabaseClient<Database>,
-  serviceId: string,
-) {
+async function getStaffIdsForService(client: any, serviceId: string) {
   const { data, error } = await client
     .from("staff_services")
     .select("staff_id, staff:staff_id(*)")

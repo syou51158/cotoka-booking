@@ -14,6 +14,53 @@ export type Database = {
   };
   public: {
     Tables: {
+      attendance_records: {
+        Row: {
+          break_minutes: number | null;
+          clock_in_at: string;
+          clock_out_at: string | null;
+          created_at: string;
+          date: string;
+          id: string;
+          staff_id: string;
+          status: Database["public"]["Enums"]["attendance_status"];
+          updated_at: string;
+          last_break_start_at: string | null;
+        };
+        Insert: {
+          break_minutes?: number | null;
+          clock_in_at: string;
+          clock_out_at?: string | null;
+          created_at?: string;
+          date?: string;
+          id?: string;
+          staff_id: string;
+          status?: Database["public"]["Enums"]["attendance_status"];
+          updated_at?: string;
+          last_break_start_at?: string | null;
+        };
+        Update: {
+          break_minutes?: number | null;
+          clock_in_at?: string;
+          clock_out_at?: string | null;
+          created_at?: string;
+          date?: string;
+          id?: string;
+          staff_id?: string;
+          status?: Database["public"]["Enums"]["attendance_status"];
+          updated_at?: string;
+          last_break_start_at?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "attendance_records_staff_id_fkey";
+            columns: ["staff_id"];
+            isOneToOne: false;
+            referencedRelation: "staff";
+            referencedColumns: ["id"];
+          },
+        ];
+      },
       appointments: {
         Row: {
           appointment_date: string;
@@ -706,6 +753,9 @@ export type Database = {
           id: string;
           phone: string | null;
           updated_at: string;
+          role: Database["public"]["Enums"]["app_role"];
+          user_id: string | null;
+          commission_rate: number | null;
         };
         Insert: {
           active?: boolean;
@@ -716,6 +766,9 @@ export type Database = {
           id?: string;
           phone?: string | null;
           updated_at?: string;
+          role?: Database["public"]["Enums"]["app_role"];
+          user_id?: string | null;
+          commission_rate?: number | null;
         };
         Update: {
           active?: boolean;
@@ -726,6 +779,9 @@ export type Database = {
           id?: string;
           phone?: string | null;
           updated_at?: string;
+          role?: Database["public"]["Enums"]["app_role"];
+          user_id?: string | null;
+          commission_rate?: number | null;
         };
         Relationships: [];
       };
@@ -792,6 +848,140 @@ export type Database = {
         };
         Relationships: [];
       };
+      shifts: {
+        Row: {
+          end_at: string;
+          id: string;
+          note: string | null;
+          staff_id: string;
+          start_at: string;
+        };
+        Insert: {
+          end_at: string;
+          id?: string;
+          note?: string | null;
+          staff_id: string;
+          start_at: string;
+        };
+        Update: {
+          end_at?: string;
+          id?: string;
+          note?: string | null;
+          staff_id?: string;
+          start_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "shifts_staff_id_fkey";
+            columns: ["staff_id"];
+            isOneToOne: false;
+            referencedRelation: "staff";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      treatment_rewards: {
+        Row: {
+          commission_rate: number;
+          created_at: string;
+          id: string;
+          reservation_id: string;
+          reward_amount_jpy: number;
+          staff_id: string;
+          total_sales_jpy: number;
+          status: Database["public"]["Enums"]["treatment_reward_status"];
+          paid_at: string | null;
+          calc_source: Json | null;
+          note: string | null;
+        };
+        Insert: {
+          commission_rate: number;
+          created_at?: string;
+          id?: string;
+          reservation_id: string;
+          reward_amount_jpy: number;
+          staff_id: string;
+          total_sales_jpy: number;
+          status?: Database["public"]["Enums"]["treatment_reward_status"];
+          paid_at?: string | null;
+          calc_source?: Json | null;
+          note?: string | null;
+        };
+        Update: {
+          commission_rate?: number;
+          created_at?: string;
+          id?: string;
+          reservation_id?: string;
+          reward_amount_jpy?: number;
+          staff_id?: string;
+          total_sales_jpy?: number;
+          status?: Database["public"]["Enums"]["treatment_reward_status"];
+          paid_at?: string | null;
+          calc_source?: Json | null;
+          note?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "treatment_rewards_reservation_id_fkey";
+            columns: ["reservation_id"];
+            isOneToOne: true;
+            referencedRelation: "reservations";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "treatment_rewards_staff_id_fkey";
+            columns: ["staff_id"];
+            isOneToOne: false;
+            referencedRelation: "staff";
+            referencedColumns: ["id"];
+          },
+        ];
+      },
+      commission_rules: {
+        Row: {
+          id: string;
+          staff_id: string | null;
+          service_id: string | null;
+          rate_type: "percentage" | "fixed";
+          rate_value: number;
+          active: boolean;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          staff_id?: string | null;
+          service_id?: string | null;
+          rate_type: "percentage" | "fixed";
+          rate_value: number;
+          active?: boolean;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          staff_id?: string | null;
+          service_id?: string | null;
+          rate_type?: "percentage" | "fixed";
+          rate_value?: number;
+          active?: boolean;
+          created_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "commission_rules_staff_id_fkey";
+            columns: ["staff_id"];
+            isOneToOne: false;
+            referencedRelation: "staff";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "commission_rules_service_id_fkey";
+            columns: ["service_id"];
+            isOneToOne: false;
+            referencedRelation: "services";
+            referencedColumns: ["id"];
+          },
+        ];
+      },
       user_salons: {
         Row: {
           role_id: number;
@@ -880,14 +1070,18 @@ export type Database = {
     };
     Enums: {
       reservation_status:
-        | "pending"
-        | "unpaid"
-        | "processing"
-        | "paid"
-        | "confirmed"
-        | "canceled"
-        | "no_show"
-        | "refunded";
+      | "pending"
+      | "unpaid"
+      | "processing"
+      | "paid"
+      | "confirmed"
+      | "canceled"
+      | "no_show"
+      | "refunded"
+      | "completed";
+      app_role: "admin" | "employee" | "contractor";
+      attendance_status: "working" | "break" | "clocked_out";
+      treatment_reward_status: "draft" | "approved" | "paid";
     };
     CompositeTypes: {
       [_ in never]: never;

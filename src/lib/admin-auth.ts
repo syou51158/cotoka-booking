@@ -83,3 +83,12 @@ export async function verifyAdminAuth(request: Request) {
     return { success: false, error: "Authentication verification failed" };
   }
 }
+
+// 既存のAPIルートが `verifyAdmin(request)` を使用しているため、
+// `verifyAdminAuth` をラップしたエイリアスを提供して互換性を維持します。
+export async function verifyAdmin(request: Request) {
+  const result = await verifyAdminAuth(request);
+  if (!result.success) {
+    throw new Error(result.error ?? "Admin verification failed");
+  }
+}

@@ -7,6 +7,7 @@ import {
   generateCalendarLinks,
 } from "@/lib/calendar";
 import type { SupportedLocale } from "@/lib/config";
+import { SITE_NAME } from "@/lib/config";
 import { getBusinessProfile } from "@/server/settings";
 import { getMagicLinkViewTtlMinutes } from "@/server/tokens";
 
@@ -64,7 +65,7 @@ export async function renderConfirmationEmail(
   const baseUrl =
     brand.websiteUrl && brand.websiteUrl.startsWith("http")
       ? brand.websiteUrl.replace(/\/+$/, "")
-      : process.env.SITE_URL || "https://cotoka.jp";
+      : process.env.SITE_URL || process.env.NEXT_PUBLIC_BASE_URL || "https://cotoka.jp";
   const prefillContact =
     reservation.customer_email || reservation.customer_phone || "";
   const manageUrl = `${baseUrl}/${locale}/manage?code=${encodeURIComponent(reservation.code)}${prefillContact ? `&contact=${encodeURIComponent(prefillContact)}` : ""}`;
@@ -193,7 +194,7 @@ export async function renderCancellationEmail(
   };
 
   // Generate rebooking URL
-  const rebookingUrl = `${process.env.NEXT_PUBLIC_BASE_URL || "https://cotoka.jp"}/${locale}/booking`;
+  const rebookingUrl = `${process.env.NEXT_PUBLIC_BASE_URL || process.env.SITE_URL || "https://cotoka.jp"}/${locale}/booking`;
 
   // Render email HTML
   const { renderToStaticMarkup } = await import("react-dom/server");
@@ -238,7 +239,7 @@ function generateICS(event: any): string {
   const icsContent = [
     "BEGIN:VCALENDAR",
     "VERSION:2.0",
-    "PRODID:-//Cotoka//Booking System//EN",
+    `PRODID:-//${SITE_NAME.replace(/\s+/g, '')}//Booking System//EN`,
     "CALSCALE:GREGORIAN",
     "METHOD:PUBLISH",
     "BEGIN:VEVENT",

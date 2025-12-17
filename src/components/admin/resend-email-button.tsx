@@ -58,9 +58,12 @@ export function ResendEmailButton({
           const message = retryMinutes
             ? `${errorData.error} (${retryMinutes}分後に再試行可能)`
             : errorData.error;
-          showToast(message, "error");
+          showToast({ description: message, variant: "error" });
         } else {
-          showToast(errorData.error || "メール送信に失敗しました", "error");
+          showToast({
+            description: errorData.error || "メール送信に失敗しました",
+            variant: "error",
+          });
         }
         return;
       }

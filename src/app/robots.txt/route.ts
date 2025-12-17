@@ -4,7 +4,7 @@ import { env } from "@/lib/env";
 export const runtime = "nodejs";
 
 export async function GET() {
-  const isStaging = env.SITE_URL?.includes("stg.cotoka.jp");
+  const isStaging = env.SITE_URL?.includes("stg.") || env.SITE_URL?.includes("localhost");
   const body = isStaging
     ? "User-agent: *\nDisallow: /\n"
     : "User-agent: *\nAllow: /\n";

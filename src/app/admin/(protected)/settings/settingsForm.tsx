@@ -1,7 +1,19 @@
+
 "use client";
 import { useState } from "react";
 import type { BusinessProfile } from "@/server/settings";
 import { showToast } from "@/lib/toast";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Separator } from "@/components/ui/separator";
 
 export default function AdminSettingsForm({
   initial,
@@ -35,7 +47,6 @@ export default function AdminSettingsForm({
         const payload = await res.json().catch(() => ({}));
         throw new Error(payload?.error || "保存に失敗しました");
       }
-      const saved: BusinessProfile = await res.json();
       showToast({
         variant: "success",
         title: "保存しました",
@@ -52,97 +63,134 @@ export default function AdminSettingsForm({
     }
   }
 
-  function input(name: keyof typeof form, props?: any) {
-    return (
-      <input
-        value={(form as any)[name]}
-        onChange={(e) => setForm((f) => ({ ...f, [name]: e.target.value }))}
-        style={{
-          width: "100%",
-          padding: 8,
-          border: "1px solid #ccc",
-          borderRadius: 6,
-        }}
-        {...props}
-      />
-    );
+  function handleChange(name: keyof typeof form, value: string) {
+    setForm(prev => ({ ...prev, [name]: value }));
   }
 
   return (
-    <div style={{ display: "grid", gap: 12 }}>
-      <label>
-        店名
-        {input("salon_name")}
-      </label>
-      <label>
-        電話
-        {input("phone")}
-      </label>
-      <label>
-        送信元メール
-        {input("email_from")}
-      </label>
-      <label>
-        タイムゾーン（IANA）
-        {input("timezone", { placeholder: "Asia/Tokyo" })}
-      </label>
-      <label>
-        既定ロケール
-        <select
-          value={form.default_locale}
-          onChange={(e) =>
-            setForm((f) => ({ ...f, default_locale: e.target.value as any }))
-          }
-          style={{
-            width: "100%",
-            padding: 8,
-            border: "1px solid #ccc",
-            borderRadius: 6,
-          }}
+    <div className="space-y-6">
+      <div className="space-y-4">
+        <div className="grid gap-2">
+          <Label className="text-slate-300">店名 (Salon Name)</Label>
+          <Input
+            value={form.salon_name}
+            onChange={e => handleChange("salon_name", e.target.value)}
+            className="bg-black/20 border-white/10 text-white"
+          />
+        </div>
+        <div className="grid gap-2">
+          <Label className="text-slate-300">電話番号</Label>
+          <Input
+            value={form.phone}
+            onChange={e => handleChange("phone", e.target.value)}
+            className="bg-black/20 border-white/10 text-white"
+          />
+        </div>
+        <div className="grid gap-2">
+          <Label className="text-slate-300">送信元メールアドレス</Label>
+          <Input
+            value={form.email_from}
+            onChange={e => handleChange("email_from", e.target.value)}
+            className="bg-black/20 border-white/10 text-white"
+          />
+        </div>
+        <div className="grid grid-cols-2 gap-4">
+          <div className="grid gap-2">
+            <Label className="text-slate-300">タイムゾーン</Label>
+            <Input
+              value={form.timezone}
+              onChange={e => handleChange("timezone", e.target.value)}
+              placeholder="Asia/Tokyo"
+              className="bg-black/20 border-white/10 text-white"
+            />
+          </div>
+          <div className="grid gap-2">
+            <Label className="text-slate-300">通貨</Label>
+            <Input
+              value={form.currency}
+              onChange={e => handleChange("currency", e.target.value)}
+              placeholder="JPY"
+              className="bg-black/20 border-white/10 text-white"
+            />
+          </div>
+        </div>
+        <div className="grid gap-2">
+          <Label className="text-slate-300">既定言語</Label>
+          <Select
+            value={form.default_locale}
+            onValueChange={(val: any) => handleChange("default_locale", val)}
+          >
+            <SelectTrigger className="bg-black/20 border-white/10 text-white">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent className="bg-slate-900 border-slate-700 text-white">
+              <SelectItem value="ja">日本語 (ja)</SelectItem>
+              <SelectItem value="en">English (en)</SelectItem>
+              <SelectItem value="zh">中文 (zh)</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
+      <Separator className="bg-white/10" />
+
+      <div className="space-y-4">
+        <div className="grid gap-2">
+          <Label className="text-slate-300">住所 (日本語)</Label>
+          <Input
+            value={form.address_ja}
+            onChange={e => handleChange("address_ja", e.target.value)}
+            className="bg-black/20 border-white/10 text-white"
+          />
+        </div>
+        <div className="grid gap-2">
+          <Label className="text-slate-300">Address (English)</Label>
+          <Input
+            value={form.address_en}
+            onChange={e => handleChange("address_en", e.target.value)}
+            className="bg-black/20 border-white/10 text-white"
+          />
+        </div>
+        <div className="grid gap-2">
+          <Label className="text-slate-300">地址 (中文)</Label>
+          <Input
+            value={form.address_zh}
+            onChange={e => handleChange("address_zh", e.target.value)}
+            className="bg-black/20 border-white/10 text-white"
+          />
+        </div>
+      </div>
+
+      <Separator className="bg-white/10" />
+
+      <div className="space-y-4">
+        <div className="grid gap-2">
+          <Label className="text-slate-300">Webサイト URL</Label>
+          <Input
+            value={form.website_url}
+            onChange={e => handleChange("website_url", e.target.value)}
+            className="bg-black/20 border-white/10 text-white"
+          />
+        </div>
+        <div className="grid gap-2">
+          <Label className="text-slate-300">マップ URL</Label>
+          <Input
+            value={form.map_url}
+            onChange={e => handleChange("map_url", e.target.value)}
+            className="bg-black/20 border-white/10 text-white"
+          />
+        </div>
+      </div>
+
+      <div className="flex justify-end pt-4">
+        <Button
+          onClick={save}
+          disabled={saving}
+          className="bg-primary hover:bg-primary/90 text-white min-w-[120px]"
         >
-          <option value="ja">ja</option>
-          <option value="en">en</option>
-          <option value="zh">zh</option>
-        </select>
-      </label>
-      <label>
-        通貨
-        {input("currency", { placeholder: "JPY" })}
-      </label>
-      <hr />
-      <label>
-        住所（日本語）
-        {input("address_ja")}
-      </label>
-      <label>
-        住所（英語）
-        {input("address_en")}
-      </label>
-      <label>
-        住所（中国語）
-        {input("address_zh")}
-      </label>
-      <hr />
-      <label>
-        WebサイトURL
-        {input("website_url")}
-      </label>
-      <label>
-        マップURL
-        {input("map_url")}
-      </label>
-      <button
-        onClick={save}
-        disabled={saving}
-        style={{
-          padding: "8px 12px",
-          borderRadius: 6,
-          background: saving ? "#888" : "#222",
-          color: "#fff",
-        }}
-      >
-        {saving ? "保存中..." : "保存"}
-      </button>
+          {saving ? "保存中..." : "設定を保存"}
+        </Button>
+      </div>
     </div>
   );
 }

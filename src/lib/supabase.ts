@@ -39,3 +39,7 @@ export function createSupabaseServiceRoleClient() {
     },
   });
 }
+
+// 既存のコードの互換性維持用: 多くのAPIで `supabaseAdmin` を直接参照している。
+// Service Roleクライアントのシングルトンをエクスポートして統一する。
+export const supabaseAdmin = createSupabaseServiceRoleClient();

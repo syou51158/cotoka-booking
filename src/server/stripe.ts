@@ -1,5 +1,5 @@
 import Stripe from "stripe";
-import { DEFAULT_LOCALE } from "@/lib/config";
+import { DEFAULT_LOCALE, SITE_NAME } from "@/lib/config";
 import { createSupabaseServiceRoleClient } from "@/lib/supabase";
 import { recordEvent } from "./events";
 import { markReservationPaid } from "./reservations";
@@ -206,8 +206,8 @@ export async function createCheckoutSessionForReservation(
               currency: "JPY",
               unit_amount: data.amount_total_jpy,
               product_data: {
-                name: data.service?.name ?? "Cotoka Reservation",
-              },
+              name: data.service?.name ?? `${SITE_NAME} Reservation`,
+            },
             },
           },
         ],

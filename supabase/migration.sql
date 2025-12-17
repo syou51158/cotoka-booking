@@ -10,7 +10,8 @@ do $$ begin
     'confirmed',
     'canceled',
     'no_show',
-    'refunded'
+    'refunded',
+    'completed'
   );
 exception when duplicate_object then null; end $$;
 
@@ -76,6 +77,22 @@ create table if not exists shifts (
   start_at timestamptz not null,
   end_at timestamptz not null,
   note text
+);
+
+-- Staff blocks (non-reservation time ranges on timetable)
+do $$ begin
+  create type staff_block_type as enum ('task','break','walk_in');
+exception when duplicate_object then null; end $$;
+
+create table if not exists staff_blocks (
+  id uuid primary key default gen_random_uuid(),
+  staff_id uuid not null references staff(id) on delete cascade,
+  start_at timestamptz not null,
+  end_at timestamptz not null,
+  block_type staff_block_type not null,
+  note text,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
 );
 
 create table if not exists reservations (
@@ -181,6 +198,7 @@ alter table if exists date_overrides enable row level security;
 alter table if exists shifts enable row level security;
 alter table if exists reservations enable row level security;
 alter table if exists events enable row level security;
+alter table if exists staff_blocks enable row level security;
 
 do $$
 begin
@@ -258,6 +276,14 @@ begin
     select 1 from pg_policies where schemaname = 'public' and tablename = 'events' and policyname = 'Admin manage events'
   ) then
     create policy "Admin manage events" on public.events
+      for all
+      using (public.auth_role() = 'admin' or public.is_service_role())
+      with check (true);
+  end if;
+  if not exists (
+    select 1 from pg_policies where schemaname = 'public' and tablename = 'staff_blocks' and policyname = 'Admin manage staff blocks'
+  ) then
+    create policy "Admin manage staff blocks" on public.staff_blocks
       for all
       using (public.auth_role() = 'admin' or public.is_service_role())
       with check (true);
@@ -357,3 +383,73 @@ alter table public.reservations
 alter table public.reservations
   add column if not exists email_verified_at timestamptz;
 
+-- 
+-- Phase 1 Implementation: Roles, Attendance, Rewards
+-- 
+
+-- 1. Roles
+do $$ begin
+  create type app_role as enum ('admin', 'employee', 'contractor');
+exception when duplicate_object then null; end $$;
+
+alter table if exists staff
+  add column if not exists role app_role not null default 'contractor',
+  add column if not exists user_id uuid references auth.users(id),
+  add column if not exists commission_rate numeric(5,2) default 0.00;
+
+-- 2. Attendance (Employees)
+do $$ begin
+  create type attendance_status as enum ('working', 'break', 'clocked_out');
+exception when duplicate_object then null; end $$;
+
+create table if not exists attendance_records (
+  id uuid primary key default gen_random_uuid(),
+  staff_id uuid not null references staff(id) on delete cascade,
+  date date not null default current_date,
+  clock_in_at timestamptz not null,
+  clock_out_at timestamptz,
+  break_minutes integer default 0,
+  status attendance_status not null default 'working',
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+-- 3. Rewards (Contractors)
+create table if not exists treatment_rewards (
+  id uuid primary key default gen_random_uuid(),
+  reservation_id uuid not null references reservations(id) on delete cascade,
+  staff_id uuid not null references staff(id) on delete cascade,
+  total_sales_jpy integer not null check (total_sales_jpy >= 0),
+  commission_rate numeric(5,2) not null check (commission_rate >= 0),
+  reward_amount_jpy integer not null check (reward_amount_jpy >= 0),
+  created_at timestamptz not null default now(),
+  unique (reservation_id)
+);
+
+-- 4. RLS for New Tables
+
+alter table if exists attendance_records enable row level security;
+alter table if exists treatment_rewards enable row level security;
+
+-- Attendance Policies
+create policy "Admin manage attendance" on public.attendance_records
+  for all using (public.auth_role() = 'admin' or public.is_service_role());
+
+create policy "Employees read own attendance" on public.attendance_records
+  for select using (staff_id in (select id from staff where user_id = auth.uid()));
+
+create policy "Employees insert own attendance" on public.attendance_records
+  for insert with check (staff_id in (select id from staff where user_id = auth.uid()));
+
+create policy "Employees update own attendance" on public.attendance_records
+  for update using (staff_id in (select id from staff where user_id = auth.uid()));
+
+-- Rewards Policies
+create policy "Admin manage rewards" on public.treatment_rewards
+  for all using (public.auth_role() = 'admin' or public.is_service_role());
+
+create policy "Contractors read own rewards" on public.treatment_rewards
+  for select using (staff_id in (select id from staff where user_id = auth.uid()));
+
+create policy "Contractors insert own rewards" on public.treatment_rewards
+  for insert with check (staff_id in (select id from staff where user_id = auth.uid()));

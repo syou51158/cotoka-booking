@@ -224,7 +224,7 @@ export default function OpsChecklistView() {
               className={
                 activeBucket === bucket
                   ? "bg-emerald-500 text-white"
-                  : "border-slate-700 text-slate-200"
+                  : "border-slate-700 text-slate-900 bg-white hover:bg-slate-100"
               }
               onClick={() => setActiveBucket(bucket)}
             >
@@ -268,7 +268,7 @@ export default function OpsChecklistView() {
                   <Button
                     variant="secondary"
                     size="sm"
-                    className="w-full sm:w-auto"
+                    className="w-full sm:w-auto text-slate-900"
                     onClick={() => handleCopy(task.command, task.id)}
                   >
                     {copiedTask === task.id ? "Copied!" : "Copy"}
@@ -281,7 +281,7 @@ export default function OpsChecklistView() {
                     className={
                       status === "done"
                         ? "bg-emerald-500 text-white"
-                        : "border-slate-700 text-slate-200"
+                        : "border-slate-700 text-slate-900 bg-white hover:bg-slate-100"
                     }
                     onClick={() => handleStatusChange(task.id, "done")}
                   >
@@ -293,7 +293,7 @@ export default function OpsChecklistView() {
                     className={
                       status === "skipped"
                         ? "bg-amber-500 text-white"
-                        : "border-slate-700 text-slate-200"
+                        : "border-slate-700 text-slate-900 bg-white hover:bg-slate-100"
                     }
                     onClick={() => handleStatusChange(task.id, "skipped")}
                   >
@@ -302,7 +302,7 @@ export default function OpsChecklistView() {
                   <Button
                     variant="ghost"
                     size="sm"
-                    className="text-slate-400"
+                    className="text-slate-300 hover:text-slate-200"
                     onClick={() => handleStatusChange(task.id, "pending")}
                   >
                     Reset

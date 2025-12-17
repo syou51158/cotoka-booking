@@ -167,32 +167,32 @@ export async function createPendingReservation(
   }
 
   console.log("[reservations] service fetch start", { serviceId });
-  const serviceRes = await withTimeout(
-    client.from("services").select("*").eq("id", serviceId).maybeSingle(),
-    12000,
-  ).catch((e: unknown) => {
+  let service: ServiceRow | null = null;
+  try {
+    const { data, error } = await withTimeout<any>(
+      client.from("services").select("*").eq("id", serviceId).maybeSingle(),
+      12000,
+    );
+    console.log("[reservations] service fetch done", { ok: !error });
+
+    if (error) {
+      throw error;
+    }
+    service = data;
+  } catch (e: unknown) {
     console.warn("[reservations] service fetch error", e);
     if (e instanceof Error && /timeout/i.test(e.message)) {
-      return { data: null, error: { code: "DB_TIMEOUT" } } as const;
+      return {
+        error: { code: "DB_TIMEOUT", message: "データベース操作がタイムアウトしました" },
+      } as const;
     }
-    throw e;
-  });
-  console.log("[reservations] service fetch done", {
-    ok: !serviceRes?.error,
-  });
-
-  if (serviceRes.error) {
-    throw serviceRes.error;
+    throw e; // Re-throw other unexpected errors
   }
 
-  const service = serviceRes.data;
   if (!service) {
     return {
       error: {
-        code:
-          serviceRes?.error?.code === "DB_TIMEOUT"
-            ? "DB_TIMEOUT"
-            : "SERVICE_NOT_FOUND",
+        code: "SERVICE_NOT_FOUND",
         message: "サービスが見つかりません",
       },
     } as const;
@@ -234,41 +234,53 @@ export async function createPendingReservation(
     ? new Date(now.getTime() + PENDING_TTL_MINUTES * 60_000).toISOString()
     : null;
 
-  console.log("[reservations] insert start");
-  const { data, error } = await withTimeout(
-    client
-      .from("reservations")
-      .insert({
-        code: reservationCode,
-        customer_name: customerName,
-        customer_email: normalizedEmail,
-        customer_phone: normalizedPhone,
-        service_id: serviceId,
-        staff_id: staffId ?? null,
-        room_id: roomId ?? null,
-        start_at: startUtc.toISOString(),
-        end_at: endUtc.toISOString(),
-        status: initialStatus,
-        pending_expires_at: pendingExpiresAt,
-        amount_total_jpy: service.price_jpy,
-        locale: locale ?? "ja",
-        notes: notes ?? null,
-        payment_option: paymentOption ?? null,
-      })
-      .select()
-      .maybeSingle(),
-    12000,
-  ).catch((e: unknown) => {
+  let newReservation: ReservationRow | null = null;
+  try {
+    console.log("[reservations] insert start");
+    const { data, error } = await withTimeout<any>(
+      client
+        .from("reservations")
+        .insert({
+          code: reservationCode,
+          customer_name: customerName,
+          customer_email: normalizedEmail,
+          customer_phone: normalizedPhone,
+          service_id: serviceId,
+          staff_id: staffId ?? null,
+          room_id: roomId ?? null,
+          start_at: startUtc.toISOString(),
+          end_at: endUtc.toISOString(),
+          status: initialStatus,
+          pending_expires_at: pendingExpiresAt,
+          amount_total_jpy: service.price_jpy,
+          locale: locale ?? "ja",
+          notes: notes ?? null,
+          payment_option: paymentOption ?? null,
+        })
+        .select()
+        .maybeSingle(),
+      12000,
+    );
+    console.log("[reservations] insert done", { ok: !error, id: data?.id });
+
+    if (error) {
+      throw error;
+    }
+    newReservation = data;
+  } catch (e: unknown) {
     console.warn("[reservations] insert error", e);
     if (e instanceof Error && /timeout/i.test(e.message)) {
-      return { data: null, error: { code: "DB_TIMEOUT" } } as any;
+      return {
+        error: { code: "DB_TIMEOUT", message: "データベース操作がタイムアウトしました" },
+      } as const;
     }
-    throw e;
-  });
-  console.log("[reservations] insert done", { ok: !error, id: data?.id });
-
-  if (error) {
-    if (error.code === "23505") {
+    // Handle Supabase unique constraint error specifically
+    if (
+      e &&
+      typeof e === "object" &&
+      "code" in e &&
+      (e as any).code === "23505" // PostgreSQL unique_violation error code
+    ) {
       return {
         error: {
           code: "SLOT_TAKEN",
@@ -276,28 +288,28 @@ export async function createPendingReservation(
         },
       } as const;
     }
-    throw error;
+    throw e;
   }
 
   // 店舗払い（confirmed）なら作成時点で確認メールを送信する
   try {
-    if (initialStatus === "confirmed" && data?.id) {
-      await sendReservationConfirmationEmail(data.id);
+    if (initialStatus === "confirmed" && newReservation?.id) {
+      await sendReservationConfirmationEmail(newReservation.id);
       recordEvent("reservation.created.confirmed", {
-        reservation_id: data.id,
-        code: data.code,
-      }).catch(() => {});
-    } else if (initialStatus === "pending" && data?.id) {
+        reservation_id: newReservation.id,
+        code: newReservation.code,
+      }).catch(() => { });
+    } else if (initialStatus === "pending" && newReservation?.id) {
       recordEvent("reservation.created.pending", {
-        reservation_id: data.id,
-        code: data.code,
-      }).catch(() => {});
+        reservation_id: newReservation.id,
+        code: newReservation.code,
+      }).catch(() => { });
     }
   } catch (e) {
     console.warn("Post-create actions failed", e);
   }
 
-  return { data: data as ReservationRow } as const;
+  return { data: newReservation as ReservationRow } as const;
 }
 
 function buildReservationCode(startUtc: Date) {
@@ -542,7 +554,7 @@ export async function cancelExpiredPendingReservations(options?: {
         code: row.code,
         pending_expires_at: row.pending_expires_at,
       } as any);
-    } catch {}
+    } catch { }
   }
 
   return { canceled: rows.length } as const;
@@ -563,7 +575,7 @@ export async function markReservationEmailVerified(reservationId: string) {
       reservation_id: data.id,
       code: (data as any).code,
       email_verified_at: nowIso,
-    }).catch(() => {});
+    }).catch(() => { });
   }
   return data as Pick<
     ReservationRow,

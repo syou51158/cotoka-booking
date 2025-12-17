@@ -1,4 +1,5 @@
 import { SALON_NAME, SALON_ADDRESS } from "@/lib/config";
+import { SITE_NAME } from "@/lib/config";
 
 interface CalendarEvent {
   title: string;
@@ -25,13 +26,13 @@ export function generateICS(event: CalendarEvent): string {
       .replace(/\n/g, "\\n");
   };
 
-  const uid = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}@cotoka.jp`;
+  const uid = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}@${SITE_NAME.toLowerCase().replace(/\s+/g, '')}.jp`;
   const now = new Date();
 
   const icsContent = [
     "BEGIN:VCALENDAR",
     "VERSION:2.0",
-    "PRODID:-//Cotoka//Booking System//EN",
+    `PRODID:-//${SITE_NAME.replace(/\s+/g, '')}//Booking System//EN`,
     "CALSCALE:GREGORIAN",
     "METHOD:PUBLISH",
     "BEGIN:VEVENT",
@@ -154,7 +155,7 @@ export function createReservationCalendarEvent(
     endTime,
     organizer: {
       name: siteName,
-      email: brand?.organizerEmail ?? "info@cotoka.jp",
+      email: brand?.organizerEmail ?? `info@${SITE_NAME.toLowerCase().replace(/\s+/g, '')}.jp`,
     },
   };
 }

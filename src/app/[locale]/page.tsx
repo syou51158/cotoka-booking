@@ -11,6 +11,7 @@ import { getActiveServices } from "@/server/services";
 import { formatCurrency, formatDuration } from "@/lib/format";
 import {
   DEFAULT_LOCALE,
+  SITE_NAME,
   FALLBACK_SERVICES,
   SALON_MAP_URL,
   SALON_OPENING_HOURS,
@@ -26,7 +27,7 @@ export default async function TopPage({ params }: Props) {
   const resolved = await params;
   const locale = resolved.locale || DEFAULT_LOCALE;
   const profile = await getBusinessProfile();
-  const siteName = profile.salon_name ?? "Cotoka";
+  const siteName = profile.salon_name ?? SITE_NAME;
   const addressLine =
     locale === "en"
       ? (profile.address_en ?? profile.address_ja ?? "")

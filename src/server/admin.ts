@@ -8,14 +8,14 @@ const client = () => createSupabaseServiceRoleClient();
 type ReservationRow = Database["public"]["Tables"]["reservations"]["Row"];
 type OpeningHourRow = Database["public"]["Tables"]["opening_hours"]["Row"];
 type DateOverrideRow = Database["public"]["Tables"]["date_overrides"]["Row"];
-type ShiftRow = Database["public"]["Tables"]["shifts"]["Row"];
+type ShiftRow = any;
 
 type StaffRow = Database["public"]["Tables"]["staff"]["Row"];
 type ServiceRow = Database["public"]["Tables"]["services"]["Row"];
 
 type AdminReservation = ReservationRow & {
   service?: Pick<ServiceRow, "name" | "duration_min">;
-  staff?: Pick<StaffRow, "display_name" | "email" | "phone" | "color">;
+  staff?: Pick<StaffRow, "id" | "display_name" | "email" | "phone" | "color">;
 };
 
 interface ReservationFilters {
@@ -34,7 +34,7 @@ export async function getAdminReservations(filters?: ReservationFilters) {
   let query = supabase
     .from("reservations")
     .select(
-      "*, service:service_id(name,duration_min), staff:staff_id(display_name,email,phone,color)",
+      "*, service:service_id(name,duration_min), staff:staff_id(id,display_name,email,phone,color)",
     )
     .gte("start_at", from.toISOString())
     .lt("start_at", to.toISOString())
@@ -180,7 +180,7 @@ export async function deleteDateOverride(id: string) {
 
 export async function getShifts(range?: { from?: string; to?: string }) {
   const supabase = client();
-  const { data, error } = await supabase
+  const { data, error } = await (supabase as any)
     .from("shifts")
     .select("*, staff:staff_id(display_name,color)")
     .gte("start_at", range?.from ?? new Date().toISOString())
@@ -199,20 +199,20 @@ export async function upsertShift(
   },
 ) {
   const supabase = client();
-  const values: Database["public"]["Tables"]["shifts"]["Insert"] = {
+  const values: any = {
     id: payload.id,
     staff_id: payload.staff_id,
     start_at: payload.start_at,
     end_at: payload.end_at,
     note: payload.note ?? null,
   };
-  const { error } = await supabase.from("shifts").upsert(values as any);
+  const { error } = await (supabase as any).from("shifts").upsert(values as any);
   if (error) throw error;
 }
 
 export async function deleteShift(id: string) {
   const supabase = client();
-  const { error } = await supabase.from("shifts").delete().eq("id", id);
+  const { error } = await (supabase as any).from("shifts").delete().eq("id", id);
   if (error) throw error;
 }
 
@@ -412,7 +412,7 @@ export async function updateServiceSlotInterval(
   minutes: number | null,
 ) {
   const supabase = client();
-  const { error } = await supabase
+  const { error } = await (supabase as any)
     .from("services")
     .update({ slot_interval_min: minutes })
     .eq("id", serviceId);
@@ -424,7 +424,7 @@ export async function updateStaffSlotInterval(
   minutes: number | null,
 ) {
   const supabase = client();
-  const { error } = await supabase
+  const { error } = await (supabase as any)
     .from("staff")
     .update({ slot_interval_min: minutes })
     .eq("id", staffId);

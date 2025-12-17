@@ -1,11 +1,10 @@
+
 import { format } from "date-fns";
 import { ja } from "date-fns/locale";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import {
   getDateOverrides,
   getOpeningHours,
@@ -39,30 +38,26 @@ export default async function AdminSchedulePage() {
     ]);
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 animate-in fade-in duration-500">
       <div>
-        <h1 className="text-2xl font-semibold">営業設定</h1>
-        <p className="text-sm text-slate-400">
+        <h1 className="text-3xl font-bold text-white drop-shadow-md mb-2">
+          営業設定
+        </h1>
+        <p className="text-slate-400">
           営業時間、休業日、スタッフシフト、予約スロット間隔を管理します。
         </p>
       </div>
 
-      <Card className="border-slate-800 bg-slate-900/40">
-        <CardHeader>
-          <CardTitle className="text-base text-slate-200">
-            予約スロット設定（全体）
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <form
-            action={updateSiteSettingsAction}
-            className="space-y-3 rounded-lg border border-slate-800 bg-slate-950/60 p-4"
-          >
-            <div className="space-y-1">
-              <Label
-                htmlFor="default-slot-interval"
-                className="text-xs text-slate-300"
-              >
+      {/* Global Slot Settings */}
+      <div className="glass-panel p-6 rounded-2xl">
+        <h2 className="text-lg font-bold text-white mb-4">予約スロット設定（全体）</h2>
+        <form
+          action={updateSiteSettingsAction}
+          className="bg-slate-900 rounded-xl border border-slate-700 p-4"
+        >
+          <div className="flex items-end gap-4">
+            <div className="space-y-1 flex-1">
+              <Label htmlFor="default-slot-interval" className="text-xs text-slate-400">
                 標準のスロット間隔（分）
               </Label>
               <Input
@@ -71,35 +66,23 @@ export default async function AdminSchedulePage() {
                 type="number"
                 min={1}
                 defaultValue={siteSettings?.default_slot_interval_min ?? 15}
-                className="bg-slate-900/80 text-slate-100"
+                className="bg-black/20 border-white/10 text-white focus:border-primary/50"
               />
             </div>
-            <div className="flex justify-end">
-              <Button
-                type="submit"
-                variant="outline"
-                size="sm"
-                className="border-slate-700 text-slate-200"
-              >
-                保存
-              </Button>
-            </div>
-          </form>
-        </CardContent>
-      </Card>
+            <Button type="submit" size="sm" className="bg-primary hover:bg-primary/90 text-white border-0">
+              保存
+            </Button>
+          </div>
+        </form>
+      </div>
 
-      <Card className="border-slate-800 bg-slate-900/40">
-        <CardHeader>
-          <CardTitle className="text-base text-slate-200">
-            曜日別営業時間
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="grid gap-4 md:grid-cols-2">
+      {/* Opening Hours */}
+      <div className="glass-panel p-6 rounded-2xl">
+        <h2 className="text-lg font-bold text-white mb-4">曜日別営業時間</h2>
+        <div className="grid gap-4 md:grid-cols-2">
           {WEEKDAY_LABELS.map((label, index) => {
-            const weekday = index; // PostgreSQL: 0 = Sunday
-            const item = openingHours.find(
-              (hour) => hour.weekday === weekday,
-            ) ?? {
+            const weekday = index;
+            const item = openingHours.find((hour) => hour.weekday === weekday) ?? {
               weekday,
               open_at: "10:00",
               close_at: "20:00",
@@ -110,383 +93,220 @@ export default async function AdminSchedulePage() {
               <form
                 key={label}
                 action={upsertOpeningHourAction}
-                className="space-y-3 rounded-lg border border-slate-800 bg-slate-950/60 p-4"
+                className={`p-4 rounded-xl border transition-all ${item.is_open ? 'bg-slate-900 border-slate-700' : 'bg-transparent border-dashed border-slate-800 opacity-60'}`}
               >
                 <input type="hidden" name="weekday" value={weekday} />
-                <div className="flex items-center justify-between">
-                  <span className="text-sm font-semibold text-slate-200">
+                <div className="flex items-center justify-between mb-3">
+                  <span className="text-sm font-bold text-white flex items-center gap-2">
                     {label}曜日
+                    {!item.is_open && <span className="text-[10px] bg-slate-800 px-2 py-0.5 rounded text-slate-400">休業</span>}
                   </span>
-                  <div className="flex items-center gap-2 text-xs text-slate-400">
-                    <Label htmlFor={`open-${weekday}`}>OPEN</Label>
+                  <div className="flex items-center gap-2">
+                    <Checkbox
+                      id={`open-enabled-${weekday}`}
+                      name="is_open"
+                      defaultChecked={item.is_open}
+                      className="border-slate-600 data-[state=checked]:bg-primary data-[state=checked]:border-primary"
+                    />
+                    <label htmlFor={`open-enabled-${weekday}`} className="text-xs text-slate-400 cursor-pointer select-none">営業有効</label>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2 mb-3">
+                  <div>
+                    <Label className="text-[10px] text-slate-500 mb-1 block">OPEN</Label>
                     <Input
-                      id={`open-${weekday}`}
                       name="open_at"
                       type="time"
                       defaultValue={item.open_at}
-                      className="bg-slate-900/80 text-slate-100"
+                      className="bg-black/20 border-white/10 text-white h-8 text-xs"
                     />
-                    <Label htmlFor={`close-${weekday}`}>CLOSE</Label>
+                  </div>
+                  <div>
+                    <Label className="text-[10px] text-slate-500 mb-1 block">CLOSE</Label>
                     <Input
-                      id={`close-${weekday}`}
                       name="close_at"
                       type="time"
                       defaultValue={item.close_at}
-                      className="bg-slate-900/80 text-slate-100"
+                      className="bg-black/20 border-white/10 text-white h-8 text-xs"
                     />
-                    <div className="flex items-center gap-2">
-                      <Checkbox
-                        id={`open-enabled-${weekday}`}
-                        name="is_open"
-                        defaultChecked={item.is_open}
-                      />
-                      <Label htmlFor={`open-enabled-${weekday}`}>営業</Label>
-                    </div>
                   </div>
                 </div>
+
                 <div className="flex justify-end">
-                  <Button
-                    type="submit"
-                    variant="outline"
-                    size="sm"
-                    className="border-slate-700 text-slate-200"
-                  >
-                    保存
+                  <Button type="submit" variant="ghost" size="sm" className="h-7 text-xs text-slate-400 hover:text-white hover:bg-white/10">
+                    更新
                   </Button>
                 </div>
               </form>
             );
           })}
-        </CardContent>
-      </Card>
+        </div>
+      </div>
 
-      <Card className="border-slate-800 bg-slate-900/40">
-        <CardHeader>
-          <CardTitle className="text-base text-slate-200">
-            休業日・特別営業
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
+      {/* Date Overrides */}
+      <div className="glass-panel p-6 rounded-2xl">
+        <h2 className="text-lg font-bold text-white mb-4">休業日・特別営業</h2>
+        <div className="space-y-6">
           <form
             action={upsertDateOverrideAction}
-            className="grid gap-3 rounded-lg border border-slate-800 bg-slate-950/60 p-4 md:grid-cols-4"
+            className="grid gap-3 p-4 bg-primary/5 border border-primary/20 rounded-xl md:grid-cols-4 items-end"
           >
             <div className="space-y-1">
-              <Label htmlFor="override-date" className="text-xs text-slate-300">
-                日付
-              </Label>
-              <Input
-                id="override-date"
-                name="date"
-                type="date"
-                required
-                className="bg-slate-900/80 text-slate-100"
-              />
+              <Label className="text-xs text-primary/80">日付</Label>
+              <Input name="date" type="date" required className="bg-black/40 border-primary/20 text-white focus:border-primary/50" />
             </div>
             <div className="space-y-1">
-              <Label htmlFor="override-open" className="text-xs text-slate-300">
-                OPEN（任意）
-              </Label>
-              <Input
-                id="override-open"
-                name="open_at"
-                type="time"
-                className="bg-slate-900/80 text-slate-100"
-              />
+              <Label className="text-xs text-primary/80">OPEN</Label>
+              <Input name="open_at" type="time" className="bg-black/40 border-primary/20 text-white focus:border-primary/50" />
             </div>
             <div className="space-y-1">
-              <Label
-                htmlFor="override-close"
-                className="text-xs text-slate-300"
-              >
-                CLOSE（任意）
-              </Label>
-              <Input
-                id="override-close"
-                name="close_at"
-                type="time"
-                className="bg-slate-900/80 text-slate-100"
-              />
+              <Label className="text-xs text-primary/80">CLOSE</Label>
+              <Input name="close_at" type="time" className="bg-black/40 border-primary/20 text-white focus:border-primary/50" />
             </div>
             <div className="space-y-1">
-              <Label htmlFor="override-note" className="text-xs text-slate-300">
-                メモ（任意）
-              </Label>
-              <Input
-                id="override-note"
-                name="note"
-                type="text"
-                className="bg-slate-900/80 text-slate-100"
-              />
-            </div>
-            <div className="col-span-full flex justify-end">
-              <Button
-                type="submit"
-                variant="outline"
-                size="sm"
-                className="border-slate-700 text-slate-200"
-              >
-                追加
-              </Button>
+              <Label className="text-xs text-primary/80">メモ</Label>
+              <div className="flex gap-2">
+                <Input name="note" type="text" className="bg-black/40 border-primary/20 text-white focus:border-primary/50" />
+                <Button type="submit" size="sm" className="bg-primary hover:bg-primary/90 text-white">追加</Button>
+              </div>
             </div>
           </form>
 
           <div className="space-y-2">
             {overrides.length === 0 ? (
-              <p className="text-xs text-slate-500">設定なし</p>
+              <div className="text-center py-8 text-slate-500 border border-dashed border-white/10 rounded-xl">特別設定はありません</div>
             ) : (
               overrides.map((override) => (
                 <form
                   key={override.id}
                   action={deleteDateOverrideAction}
-                  className="flex items-center justify-between rounded-lg border border-slate-800 bg-slate-950/60 p-4"
+                  className="flex items-center justify-between p-3 rounded-lg bg-slate-900 border border-slate-700 hover:border-slate-600 transition-colors"
                 >
                   <input type="hidden" name="id" value={override.id} />
-                  <div>
-                    <span className="font-medium text-slate-100">
-                      {override.date}
+                  <div className="flex items-center gap-4">
+                    <span className="font-mono text-white bg-black/20 px-2 py-1 rounded text-sm">{override.date}</span>
+                    <span className={`text-xs px-2 py-0.5 rounded ${override.is_open ? 'bg-emerald-500/20 text-emerald-300' : 'bg-rose-500/20 text-rose-300'}`}>
+                      {override.is_open ? `${override.open_at} - ${override.close_at}` : "休業"}
                     </span>
-                    <span className="ml-2 text-xs text-slate-400">
-                      {override.is_open
-                        ? `${override.open_at ?? "未設定"} - ${override.close_at ?? "未設定"}`
-                        : "休業"}
-                    </span>
-                    {override.note ? (
-                      <span className="ml-2 text-xs text-slate-500">
-                        {override.note}
-                      </span>
-                    ) : null}
+                    {override.note && <span className="text-xs text-slate-400 max-w-[200px] truncate">{override.note}</span>}
                   </div>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="text-red-300 hover:bg-red-500/10"
-                  >
-                    削除
+                  <Button variant="ghost" size="sm" className="text-slate-500 hover:text-red-400 hover:bg-red-500/10 h-8 w-8 p-0 grid place-content-center">
+                    ×
                   </Button>
                 </form>
               ))
             )}
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
 
-      <Card className="border-slate-800 bg-slate-900/40">
-        <CardHeader>
-          <CardTitle className="text-base text-slate-200">
-            スタッフシフト
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <form
-            action={upsertShiftAction}
-            className="grid gap-3 rounded-lg border border-slate-800 bg-slate-950/60 p-4 md:grid-cols-5"
-          >
+      {/* Shifts */}
+      <div className="glass-panel p-6 rounded-2xl">
+        <h2 className="text-lg font-bold text-white mb-4">スタッフシフト</h2>
+        <div className="space-y-6">
+          <form action={upsertShiftAction} className="grid gap-3 p-4 bg-slate-900 border border-slate-700 rounded-xl md:grid-cols-5 items-end">
             <div className="space-y-1">
-              <Label htmlFor="shift-staff" className="text-xs text-slate-300">
-                スタッフ
-              </Label>
-              <select
-                id="shift-staff"
-                name="staff_id"
-                className="h-10 w-full rounded border border-slate-800 bg-slate-900/80 px-2 text-sm text-slate-100"
-              >
-                {staff.map((member) => (
-                  <option key={member.id} value={member.id}>
-                    {member.display_name}
-                  </option>
-                ))}
+              <Label className="text-xs text-slate-400">スタッフ</Label>
+              <select name="staff_id" className="h-10 w-full rounded border border-white/10 bg-black/20 px-2 text-sm text-white focus:ring-primary focus:border-primary">
+                {staff.map((m) => <option key={m.id} value={m.id}>{m.display_name}</option>)}
               </select>
             </div>
             <div className="space-y-1">
-              <Label htmlFor="shift-start" className="text-xs text-slate-300">
-                開始
-              </Label>
-              <Input
-                id="shift-start"
-                name="start_at"
-                type="datetime-local"
-                required
-                className="bg-slate-900/80 text-slate-100"
-              />
+              <Label className="text-xs text-slate-400">開始</Label>
+              <Input name="start_at" type="datetime-local" required className="bg-black/20 border-white/10 text-white" />
             </div>
             <div className="space-y-1">
-              <Label htmlFor="shift-end" className="text-xs text-slate-300">
-                終了
-              </Label>
-              <Input
-                id="shift-end"
-                name="end_at"
-                type="datetime-local"
-                required
-                className="bg-slate-900/80 text-slate-100"
-              />
+              <Label className="text-xs text-slate-400">終了</Label>
+              <Input name="end_at" type="datetime-local" required className="bg-black/20 border-white/10 text-white" />
             </div>
-            <div className="space-y-1 md:col-span-2">
-              <Label htmlFor="shift-note" className="text-xs text-slate-300">
-                メモ
-              </Label>
-              <Textarea
-                id="shift-note"
-                name="note"
-                rows={1}
-                className="bg-slate-900/80 text-slate-100"
-              />
+            <div className="space-y-1 md:col-span-1">
+              <Label className="text-xs text-slate-400">メモ</Label>
+              <Input name="note" className="bg-black/20 border-white/10 text-white" />
             </div>
-            <div className="col-span-full flex justify-end">
-              <Button
-                type="submit"
-                variant="outline"
-                size="sm"
-                className="border-slate-700 text-slate-200"
-              >
-                追加
-              </Button>
+            <div className="flex justify-end">
+              <Button type="submit" size="sm" className="bg-white/10 hover:bg-white/20 text-white border border-white/10">追加</Button>
             </div>
           </form>
 
           <div className="space-y-2">
-            {shifts.length === 0 ? (
-              <p className="text-xs text-slate-500">設定なし</p>
-            ) : (
-              shifts.map((shift) => (
-                <form
-                  key={shift.id}
-                  action={deleteShiftAction}
-                  className="grid grid-cols-1 items-center justify-between gap-2 rounded-lg border border-slate-800 bg-slate-950/60 p-4 md:grid-cols-4"
-                >
-                  <input type="hidden" name="id" value={shift.id} />
-                  <div className="text-sm">
-                    <span className="text-slate-200">
-                      {staff.find((s) => s.id === shift.staff_id)
-                        ?.display_name ?? "?"}
-                    </span>
+            {shifts.map((shift) => (
+              <form key={shift.id} action={deleteShiftAction} className="flex items-center justify-between p-3 rounded-lg bg-slate-900 border border-slate-700">
+                <input type="hidden" name="id" value={shift.id} />
+                <div className="flex items-center gap-4 text-sm">
+                  <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 rounded-full" style={{ backgroundColor: staff.find(s => s.id === shift.staff_id)?.color || '#666' }} />
+                    <span className="text-white font-medium">{staff.find(s => s.id === shift.staff_id)?.display_name}</span>
                   </div>
-                  <div className="text-sm text-slate-300">
-                    {format(new Date(shift.start_at), "M/d(EEE) HH:mm", {
-                      locale: ja,
-                    })}{" "}
-                    -{" "}
-                    {format(new Date(shift.end_at), "M/d(EEE) HH:mm", {
-                      locale: ja,
-                    })}
-                  </div>
-                  <div className="text-xs text-slate-500">
-                    {shift.note ?? ""}
-                  </div>
-                  <div className="flex justify-end">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="text-red-300 hover:bg-red-500/10"
-                    >
-                      削除
-                    </Button>
-                  </div>
-                </form>
-              ))
-            )}
+                  <span className="text-slate-400">
+                    {format(new Date(shift.start_at), "M/d HH:mm")} - {format(new Date(shift.end_at), "HH:mm")}
+                  </span>
+                </div>
+                <Button variant="ghost" size="sm" className="text-slate-500 hover:text-red-400 hover:bg-red-500/10 h-8 w-8 p-0">×</Button>
+              </form>
+            ))}
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
 
-      <Card className="border-slate-800 bg-slate-900/40">
-        <CardHeader>
-          <CardTitle className="text-base text-slate-200">
-            メニュー別スロット間隔
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-2">
-          {services.length === 0 ? (
-            <p className="text-xs text-slate-500">サービスがありません</p>
-          ) : (
-            services.map((service) => (
-              <form
-                key={service.id}
-                action={updateServiceSlotIntervalAction}
-                className="grid grid-cols-1 items-center gap-2 rounded-lg border border-slate-800 bg-slate-950/60 p-4 md:grid-cols-4"
-              >
+      {/* Slot Intervals (Service & Staff) */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="glass-panel p-6 rounded-2xl">
+          <h2 className="text-lg font-bold text-white mb-4">メニュー別スロット間隔</h2>
+          <div className="space-y-4">
+            {services.map((service) => (
+              <form key={service.id} action={updateServiceSlotIntervalAction} className="p-3 rounded-lg bg-slate-900 border border-slate-700">
                 <input type="hidden" name="service_id" value={service.id} />
-                <div className="text-sm font-medium text-slate-200">
-                  {service.name}
+                <div className="flex justify-between items-start mb-2">
+                  <div>
+                    <div className="text-sm font-medium text-white">{service.name}</div>
+                    <div className="text-xs text-slate-400">{service.duration_min}分 / ¥{service.price_jpy}</div>
+                  </div>
                 </div>
-                <div className="text-xs text-slate-400">
-                  {service.duration_min}分 / ¥{service.price_jpy}
-                </div>
-                <div>
+                <div className="flex gap-2">
                   <Input
                     name="slot_interval_min"
                     type="number"
                     min={1}
                     defaultValue={(service as any).slot_interval_min ?? ""}
-                    placeholder="未設定（全体設定を利用）"
-                    className="bg-slate-900/80 text-slate-100"
+                    placeholder="未設定"
+                    className="bg-black/20 border-white/10 text-white h-8 text-xs"
                   />
-                </div>
-                <div className="flex justify-end gap-2">
-                  <Button
-                    type="submit"
-                    variant="outline"
-                    size="sm"
-                    className="border-slate-700 text-slate-200"
-                  >
-                    保存
-                  </Button>
+                  <Button type="submit" size="sm" variant="ghost" className="h-8 text-xs bg-white/5 hover:bg-white/10 text-slate-300">保存</Button>
                 </div>
               </form>
-            ))
-          )}
-        </CardContent>
-      </Card>
+            ))}
+          </div>
+        </div>
 
-      <Card className="border-slate-800 bg-slate-900/40">
-        <CardHeader>
-          <CardTitle className="text-base text-slate-200">
-            スタッフ別スロット間隔
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-2">
-          {staff.length === 0 ? (
-            <p className="text-xs text-slate-500">スタッフがいません</p>
-          ) : (
-            staff.map((member) => (
-              <form
-                key={member.id}
-                action={updateStaffSlotIntervalAction}
-                className="grid grid-cols-1 items-center gap-2 rounded-lg border border-slate-800 bg-slate-950/60 p-4 md:grid-cols-4"
-              >
+        <div className="glass-panel p-6 rounded-2xl">
+          <h2 className="text-lg font-bold text-white mb-4">スタッフ別スロット間隔</h2>
+          <div className="space-y-4">
+            {staff.map((member) => (
+              <form key={member.id} action={updateStaffSlotIntervalAction} className="p-3 rounded-lg bg-slate-900 border border-slate-700">
                 <input type="hidden" name="staff_id" value={member.id} />
-                <div className="text-sm font-medium text-slate-200">
-                  {member.display_name}
+                <div className="flex justify-between items-start mb-2">
+                  <div>
+                    <div className="text-sm font-medium text-white">{member.display_name}</div>
+                    <div className="text-xs text-slate-400">{member.email}</div>
+                  </div>
                 </div>
-                <div className="text-xs text-slate-400">
-                  {member.email ?? ""}
-                </div>
-                <div>
+                <div className="flex gap-2">
                   <Input
                     name="slot_interval_min"
                     type="number"
                     min={1}
                     defaultValue={(member as any).slot_interval_min ?? ""}
-                    placeholder="未設定（サービス/全体設定を利用）"
-                    className="bg-slate-900/80 text-slate-100"
+                    placeholder="未設定"
+                    className="bg-black/20 border-white/10 text-white h-8 text-xs"
                   />
-                </div>
-                <div className="flex justify-end gap-2">
-                  <Button
-                    type="submit"
-                    variant="outline"
-                    size="sm"
-                    className="border-slate-700 text-slate-200"
-                  >
-                    保存
-                  </Button>
+                  <Button type="submit" size="sm" variant="ghost" className="h-8 text-xs bg-white/5 hover:bg-white/10 text-slate-300">保存</Button>
                 </div>
               </form>
-            ))
-          )}
-        </CardContent>
-      </Card>
+            ))}
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
