@@ -1048,6 +1048,186 @@ export type Database = {
         };
         Relationships: [];
       };
+      profiles: {
+        Row: {
+          id: string;
+          role: Database["public"]["Enums"]["user_role"];
+          full_name: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id: string;
+          role?: Database["public"]["Enums"]["user_role"];
+          full_name?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          role?: Database["public"]["Enums"]["user_role"];
+          full_name?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "profiles_id_fkey";
+            columns: ["id"];
+            isOneToOne: true;
+            referencedRelation: "users";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      sales_entries: {
+        Row: {
+          id: string;
+          staff_id: string;
+          date: string;
+          sales_amount: number;
+          status: Database["public"]["Enums"]["sales_entry_status"];
+          note: string | null;
+          approved_at: string | null;
+          approved_by: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          staff_id: string;
+          date: string;
+          sales_amount?: number;
+          status?: Database["public"]["Enums"]["sales_entry_status"];
+          note?: string | null;
+          approved_at?: string | null;
+          approved_by?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          staff_id?: string;
+          date?: string;
+          sales_amount?: number;
+          status?: Database["public"]["Enums"]["sales_entry_status"];
+          note?: string | null;
+          approved_at?: string | null;
+          approved_by?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "sales_entries_staff_id_fkey";
+            columns: ["staff_id"];
+            isOneToOne: false;
+            referencedRelation: "staff";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      sales_entry_events: {
+        Row: {
+          id: string;
+          sales_entry_id: string;
+          event_type: Database["public"]["Enums"]["sales_entry_event_type"];
+          actor_id: string | null;
+          payload: Json | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          sales_entry_id: string;
+          event_type: Database["public"]["Enums"]["sales_entry_event_type"];
+          actor_id?: string | null;
+          payload?: Json | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          sales_entry_id?: string;
+          event_type?: Database["public"]["Enums"]["sales_entry_event_type"];
+          actor_id?: string | null;
+          payload?: Json | null;
+          created_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "sales_entry_events_sales_entry_id_fkey";
+            columns: ["sales_entry_id"];
+            isOneToOne: false;
+            referencedRelation: "sales_entries";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      payroll_runs: {
+        Row: {
+          id: string;
+          month: string;
+          status: Database["public"]["Enums"]["payroll_run_status"];
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          month: string;
+          status?: Database["public"]["Enums"]["payroll_run_status"];
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          month?: string;
+          status?: Database["public"]["Enums"]["payroll_run_status"];
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      payroll_items: {
+        Row: {
+          id: string;
+          payroll_run_id: string;
+          staff_id: string;
+          amount: number;
+          details: Json | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          payroll_run_id: string;
+          staff_id: string;
+          amount?: number;
+          details?: Json | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          payroll_run_id?: string;
+          staff_id?: string;
+          amount?: number;
+          details?: Json | null;
+          created_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "payroll_items_payroll_run_id_fkey";
+            columns: ["payroll_run_id"];
+            isOneToOne: false;
+            referencedRelation: "payroll_runs";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "payroll_items_staff_id_fkey";
+            columns: ["staff_id"];
+            isOneToOne: false;
+            referencedRelation: "staff";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
     };
     Views: {
       [_ in never]: never;
@@ -1082,6 +1262,10 @@ export type Database = {
       app_role: "admin" | "employee" | "contractor";
       attendance_status: "working" | "break" | "clocked_out";
       treatment_reward_status: "draft" | "approved" | "paid";
+      user_role: "owner" | "manager" | "staff";
+      sales_entry_status: "draft" | "submitted" | "approved" | "rejected" | "paid_locked";
+      sales_entry_event_type: "submit" | "approve" | "reject" | "unlock" | "update";
+      payroll_run_status: "draft" | "confirmed" | "paid";
     };
     CompositeTypes: {
       [_ in never]: never;

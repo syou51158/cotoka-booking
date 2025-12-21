@@ -19,10 +19,12 @@ export default async function StaffPage() {
                         セラピスト・従業員の登録と権限管理を行います。
                     </p>
                 </div>
-                <Button className="bg-primary hover:bg-primary/90 text-white gap-2 shadow-[0_0_20px_rgba(59,130,246,0.5)] border border-white/20">
-                    <Plus className="w-4 h-4" />
-                    新規登録
-                </Button>
+                <Link href="/admin/staff/new">
+                    <Button className="bg-primary hover:bg-primary/90 text-white gap-2 shadow-[0_0_20px_rgba(59,130,246,0.5)] border border-white/20">
+                        <Plus className="w-4 h-4" />
+                        新規登録
+                    </Button>
+                </Link>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -59,20 +61,22 @@ export default async function StaffPage() {
                         </div>
 
                         <div className="relative z-10 pt-4 border-t border-white/5 flex gap-2">
-                            <Button variant="ghost" className="w-full hover:bg-white/10 text-slate-300 hover:text-white">
-                                詳細・編集
-                            </Button>
+                            <Link href={`/admin/staff/${staff.id}`} className="w-full">
+                                <Button variant="ghost" className="w-full hover:bg-white/10 text-slate-300 hover:text-white">
+                                    詳細・編集
+                                </Button>
+                            </Link>
                         </div>
                     </div>
                 ))}
 
                 {/* Empty State / Add New Card */}
-                <button className="border border-dashed border-slate-700 rounded-2xl p-6 flex flex-col items-center justify-center text-slate-500 hover:text-primary hover:border-primary/50 hover:bg-primary/5 transition-all min-h-[250px] group">
+                <Link href="/admin/staff/new" className="border border-dashed border-slate-700 rounded-2xl p-6 flex flex-col items-center justify-center text-slate-500 hover:text-primary hover:border-primary/50 hover:bg-primary/5 transition-all min-h-[250px] group">
                     <div className="h-12 w-12 rounded-full bg-slate-800 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform shadow-lg">
                         <Plus className="w-6 h-6" />
                     </div>
                     <span className="font-medium">新しいスタッフを登録</span>
-                </button>
+                </Link>
             </div>
         </div>
     );

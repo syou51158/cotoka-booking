@@ -15,11 +15,12 @@ import {
     ClipboardList,
     LogOut,
     Sparkles,
-    CalendarClock
+    CalendarClock,
+    Banknote
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { SITE_NAME } from "@/lib/config";
-import { logout } from "@/app/admin/(auth)/login/actions";
+import { logout } from "@/app/login/actions";
 
 interface SidebarProps extends React.HTMLAttributes<HTMLDivElement> { }
 
@@ -70,6 +71,12 @@ export function AppSidebar({ className }: SidebarProps) {
                     icon: CalendarClock,
                     href: "/admin/shifts",
                     active: pathname.startsWith("/admin/shifts"),
+                },
+                {
+                    label: "売上管理",
+                    icon: Banknote,
+                    href: "/admin/sales",
+                    active: pathname.startsWith("/admin/sales"),
                 },
             ],
         },

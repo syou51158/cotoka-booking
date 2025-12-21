@@ -7,15 +7,16 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
 import { ja } from "date-fns/locale";
-import { Coffee, LogOut, Play, Square } from "lucide-react";
+import { Coffee, LogOut, Play, Square, Briefcase, CheckCircle2 } from "lucide-react";
 
 type AttendanceStatus = "working" | "break" | "clocked_out" | null;
 
-export function TimeCard() {
+export function TimeCard({ staffId }: { staffId?: string }) {
   const [status, setStatus] = useState<AttendanceStatus>(null);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
   const [record, setRecord] = useState<any>(null);
+  const [role, setRole] = useState<string>("employee");
   const [now, setNow] = useState(new Date());
 
   useEffect(() => {
@@ -25,7 +26,7 @@ export function TimeCard() {
 
   useEffect(() => {
     fetchStatus();
-  }, []);
+  }, [staffId]);
 
   const fetchStatus = async () => {
     try {
@@ -39,10 +40,15 @@ export function TimeCard() {
 
       if (!session) return;
 
+      const headers: Record<string, string> = {
+        Authorization: `Bearer ${session.access_token}`,
+      };
+      if (staffId) {
+        headers['x-staff-id'] = staffId;
+      }
+
       const res = await fetch("/api/employee/attendance", {
-        headers: {
-          Authorization: `Bearer ${session.access_token}`,
-        },
+        headers,
       });
 
       if (res.ok) {
@@ -52,6 +58,9 @@ export function TimeCard() {
           setStatus(data.status);
         } else {
           setStatus(null);
+        }
+        if (data.role) {
+            setRole(data.role);
         }
       }
     } catch (e) {
@@ -74,12 +83,17 @@ export function TimeCard() {
 
       if (!session) return;
 
+      const headers: Record<string, string> = {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${session.access_token}`,
+      };
+      if (staffId) {
+        headers['x-staff-id'] = staffId;
+      }
+
       const res = await fetch(`/api/attendance/${action}`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${session.access_token}`,
-        },
+        headers,
         body: JSON.stringify({}),
       });
 
@@ -106,7 +120,22 @@ export function TimeCard() {
     );
   }
 
+  const isContractor = role === 'contractor';
   const isClockedOut = status === "clocked_out";
+
+  // Contractor-specific UI text and styles
+  const startLabel = isContractor ? "業務開始" : "出勤";
+  const endLabel = isContractor ? "業務終了" : "退勤";
+  const workingLabel = isContractor ? "● 稼働中" : "● 勤務中";
+  const endedLabel = isContractor ? "終了" : "勤務終了";
+  
+  const startColor = isContractor 
+    ? "bg-gradient-to-br from-cyan-500 to-blue-600 hover:from-cyan-600 hover:to-blue-700" 
+    : "bg-gradient-to-br from-emerald-500 to-emerald-700 hover:from-emerald-600 hover:to-emerald-800";
+    
+  const workingBadgeColor = isContractor 
+    ? "bg-cyan-600 hover:bg-cyan-700" 
+    : "bg-emerald-600 hover:bg-emerald-700";
 
   return (
     <div className="w-full max-w-sm mx-auto space-y-6">
@@ -118,18 +147,21 @@ export function TimeCard() {
           {format(now, "HH:mm")}
           <span className="text-2xl text-muted-foreground ml-1">{format(now, "ss")}</span>
         </h1>
-        <div className="pt-2 flex justify-center">
+        <div className="pt-2 flex justify-center flex-col items-center gap-2">
           <Badge
             variant={status === "working" ? "default" : "outline"}
-            className={`px-3 py-1 text-sm font-normal ${status === "working" ? "bg-emerald-600 hover:bg-emerald-700" :
+            className={`px-3 py-1 text-sm font-normal ${status === "working" ? workingBadgeColor :
                 status === "break" ? "bg-amber-500 hover:bg-amber-600 text-white border-transparent" :
                   status === "clocked_out" ? "bg-slate-200 text-slate-700 border-transparent" : ""
               }`}
           >
-            {status === "working" ? "● WORK ON" :
-              status === "break" ? "☕ BREAK" :
-                status === "clocked_out" ? "FINISHED" : "OFF DUTY"}
+            {status === "working" ? workingLabel :
+              status === "break" ? "☕ 休憩中" :
+                status === "clocked_out" ? endedLabel : "勤務外"}
           </Badge>
+          {isContractor && (
+             <span className="text-[10px] text-slate-400">※稼働状況の記録</span>
+          )}
         </div>
       </div>
 
@@ -137,13 +169,13 @@ export function TimeCard() {
         <CardContent className="p-0 space-y-3">
           {!status && (
             <Button
-              className="w-full h-32 rounded-2xl text-2xl font-bold shadow-xl bg-gradient-to-br from-emerald-500 to-emerald-700 hover:from-emerald-600 hover:to-emerald-800 transition-all transform active:scale-95"
+              className={`w-full h-32 rounded-2xl text-2xl font-bold shadow-xl transition-all transform active:scale-95 ${startColor}`}
               onClick={() => handleAction("clock_in")}
               disabled={actionLoading}
             >
               <div className="flex flex-col items-center gap-2">
-                <Play className="h-8 w-8 fill-current" />
-                <span>CLOCK IN</span>
+                {isContractor ? <Briefcase className="h-8 w-8 fill-current" /> : <Play className="h-8 w-8 fill-current" />}
+                <span>{startLabel}</span>
               </div>
             </Button>
           )}
@@ -158,7 +190,7 @@ export function TimeCard() {
               >
                 <div className="flex flex-col items-center gap-2">
                   <Coffee className="h-8 w-8" />
-                  <span>BREAK</span>
+                  <span>休憩</span>
                 </div>
               </Button>
               <Button
@@ -169,7 +201,7 @@ export function TimeCard() {
               >
                 <div className="flex flex-col items-center gap-2">
                   <Square className="h-8 w-8 fill-current" />
-                  <span>FINISH</span>
+                  <span>{endLabel}</span>
                 </div>
               </Button>
             </div>
@@ -177,13 +209,13 @@ export function TimeCard() {
 
           {status === "break" && (
             <Button
-              className="w-full h-32 rounded-2xl text-2xl font-bold shadow-xl bg-emerald-600 hover:bg-emerald-700"
+              className={`w-full h-32 rounded-2xl text-2xl font-bold shadow-xl ${isContractor ? 'bg-cyan-600 hover:bg-cyan-700' : 'bg-emerald-600 hover:bg-emerald-700'}`}
               onClick={() => handleAction("break_end")}
               disabled={actionLoading}
             >
               <div className="flex flex-col items-center gap-2">
                 <Play className="h-8 w-8" />
-                <span>RESUME WORK</span>
+                <span>再開</span>
               </div>
             </Button>
           )}
@@ -191,21 +223,23 @@ export function TimeCard() {
           {isClockedOut && (
             <div className="rounded-2xl border bg-card/50 p-6 text-center space-y-4">
               <div className="space-y-1">
-                <p className="text-lg font-semibold text-foreground">Good Job!</p>
-                <p className="text-sm text-muted-foreground">本日の業務は完了しました</p>
+                <p className="text-lg font-semibold text-foreground">お疲れ様でした！</p>
+                <p className="text-sm text-muted-foreground">
+                    {isContractor ? "本日の業務記録を保存しました" : "本日の業務は完了しました"}
+                </p>
               </div>
 
               <div className="grid grid-cols-3 gap-2 text-sm border-t pt-4">
                 <div className="flex flex-col">
-                  <span className="text-xs text-muted-foreground">START</span>
+                  <span className="text-xs text-muted-foreground">開始</span>
                   <span className="font-mono font-medium">{record?.clock_in_at ? format(new Date(record.clock_in_at), "HH:mm") : "-"}</span>
                 </div>
                 <div className="flex flex-col">
-                  <span className="text-xs text-muted-foreground">BREAK</span>
-                  <span className="font-mono font-medium">{record?.break_minutes ?? 0}m</span>
+                  <span className="text-xs text-muted-foreground">休憩</span>
+                  <span className="font-mono font-medium">{record?.break_minutes ?? 0}分</span>
                 </div>
                 <div className="flex flex-col">
-                  <span className="text-xs text-muted-foreground">END</span>
+                  <span className="text-xs text-muted-foreground">終了</span>
                   <span className="font-mono font-medium">{record?.clock_out_at ? format(new Date(record.clock_out_at), "HH:mm") : "-"}</span>
                 </div>
               </div>

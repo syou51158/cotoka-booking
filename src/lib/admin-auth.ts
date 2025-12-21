@@ -1,6 +1,7 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { createHash } from "node:crypto";
+import { createSupabaseServerClient } from "./supabase-server";
 
 const ADMIN_COOKIE = "cotoka-admin-token";
 
@@ -13,19 +14,41 @@ function getExpectedToken() {
 }
 
 export async function isAdminAuthenticated() {
+  // 1. Check Legacy Token
   const cookieStore = await cookies();
   const token = cookieStore.get(ADMIN_COOKIE)?.value;
-  if (!token) return false;
-  try {
-    return token === getExpectedToken();
-  } catch {
-    return false;
+  if (token) {
+    try {
+      if (token === getExpectedToken()) return true;
+    } catch {}
   }
+
+  // 2. Check Supabase Session
+  try {
+      const supabase = await createSupabaseServerClient();
+      const { data: { user }, error } = await supabase.auth.getUser();
+      
+      if (!error && user) {
+          const { data: profile } = await supabase
+              .from('profiles')
+              .select('role')
+              .eq('id', user.id)
+              .single();
+          
+          if (profile?.role === 'owner' || profile?.role === 'manager') {
+              return true;
+          }
+      }
+  } catch (e) {
+      console.error("Supabase Auth Check Failed", e);
+  }
+
+  return false;
 }
 
 export async function requireAdmin() {
   if (!(await isAdminAuthenticated())) {
-    redirect("/admin/login");
+    redirect("/login");
   }
 }
 
@@ -54,38 +77,49 @@ export async function clearAdminSession() {
 }
 
 export async function verifyAdminAuth(request: Request) {
+  // 1. Check Legacy Token from Request Headers
   const cookieHeader = request.headers.get("cookie");
-  if (!cookieHeader) {
-    return { success: false, error: "No authentication cookie" };
+  if (cookieHeader) {
+      const cookiesMap = cookieHeader.split(";").reduce(
+        (acc, cookie) => {
+          const [key, value] = cookie.trim().split("=");
+          acc[key] = value;
+          return acc;
+        },
+        {} as Record<string, string>,
+      );
+      const token = cookiesMap[ADMIN_COOKIE];
+      if (token) {
+           try {
+            const expected = getExpectedToken();
+            if (token === expected) return { success: true };
+          } catch {}
+      }
   }
 
-  const cookies = cookieHeader.split(";").reduce(
-    (acc, cookie) => {
-      const [key, value] = cookie.trim().split("=");
-      acc[key] = value;
-      return acc;
-    },
-    {} as Record<string, string>,
-  );
-
-  const token = cookies[ADMIN_COOKIE];
-  if (!token) {
-    return { success: false, error: "Admin token not found" };
-  }
-
+  // 2. Check Supabase Session (using global cookies() since we are in App Router)
   try {
-    const expected = getExpectedToken();
-    if (token !== expected) {
-      return { success: false, error: "Invalid admin token" };
-    }
-    return { success: true };
-  } catch (error) {
-    return { success: false, error: "Authentication verification failed" };
+      const supabase = await createSupabaseServerClient();
+      const { data: { user }, error } = await supabase.auth.getUser();
+      
+      if (!error && user) {
+          const { data: profile } = await supabase
+              .from('profiles')
+              .select('role')
+              .eq('id', user.id)
+              .single();
+          
+          if (profile?.role === 'owner' || profile?.role === 'manager') {
+              return { success: true };
+          }
+      }
+  } catch (e) {
+      console.error("Supabase Auth Check Failed in API", e);
   }
+
+  return { success: false, error: "Unauthorized" };
 }
 
-// 既存のAPIルートが `verifyAdmin(request)` を使用しているため、
-// `verifyAdminAuth` をラップしたエイリアスを提供して互換性を維持します。
 export async function verifyAdmin(request: Request) {
   const result = await verifyAdminAuth(request);
   if (!result.success) {

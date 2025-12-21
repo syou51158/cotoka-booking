@@ -1,39 +1,20 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
-import { env } from "@/lib/env";
-import { getStaffByUserId } from "@/server/staff";
+import { getEffectiveStaff } from "@/lib/api-auth";
 import { getTodayAttendance } from "@/server/attendance";
 
-async function getUserFromRequest(req: NextRequest) {
-  const authHeader = req.headers.get("Authorization");
-  if (!authHeader) return null;
-
-  const supabase = createClient(env.SUPABASE_URL, env.SUPABASE_ANON_KEY, {
-    global: { headers: { Authorization: authHeader } },
-  });
-  const {
-    data: { user },
-    error,
-  } = await supabase.auth.getUser();
-
-  if (error || !user) return null;
-  return user;
-}
-
 export async function GET(req: NextRequest) {
-  const user = await getUserFromRequest(req);
-  if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
-  const staff = await getStaffByUserId(user.id);
-  if (!staff) {
-    return NextResponse.json({ error: "Staff profile not found" }, { status: 404 });
+  const auth = await getEffectiveStaff(req);
+  if ("error" in auth) {
+    return NextResponse.json({ error: auth.error }, { status: auth.status });
   }
 
   try {
-    const data = await getTodayAttendance(staff.id);
-    return NextResponse.json(data || { status: null });
+    const data = await getTodayAttendance(auth.staff.id);
+    // Include role in the response
+    return NextResponse.json({
+      ...(data || { status: null }),
+      role: auth.staff.role
+    });
   } catch (e: any) {
     return NextResponse.json(
       { error: e.message || "Failed to fetch attendance" },
