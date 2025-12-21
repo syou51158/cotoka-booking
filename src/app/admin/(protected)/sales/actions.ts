@@ -1,6 +1,6 @@
 "use server";
 
-import { supabaseAdmin } from "@/lib/supabase";
+import { getSupabaseAdmin } from "@/lib/supabase";
 import { revalidatePath } from "next/cache";
 import { isAdminAuthenticated } from "@/lib/admin-auth";
 import { startOfMonth, endOfMonth, format } from "date-fns";
@@ -31,6 +31,7 @@ export interface MonthlyStats {
 export async function getPendingEntries(): Promise<SalesEntryWithStaff[]> {
     const isAuth = await isAdminAuthenticated();
     if (!isAuth) throw new Error("Unauthorized");
+    const supabaseAdmin = getSupabaseAdmin();
 
     const { data, error } = await supabaseAdmin
         .from('sales_entries')
@@ -50,6 +51,7 @@ export async function getPendingEntries(): Promise<SalesEntryWithStaff[]> {
 export async function updateEntryStatus(id: string, status: 'approved' | 'rejected') {
     const isAuth = await isAdminAuthenticated();
     if (!isAuth) throw new Error("Unauthorized");
+    const supabaseAdmin = getSupabaseAdmin();
 
     // 1. Update status
     const { error } = await supabaseAdmin
@@ -78,6 +80,7 @@ export async function updateEntryStatus(id: string, status: 'approved' | 'reject
 export async function getMonthlySummary(monthStr: string): Promise<MonthlyStats> {
     const isAuth = await isAdminAuthenticated();
     if (!isAuth) throw new Error("Unauthorized");
+    const supabaseAdmin = getSupabaseAdmin();
 
     const date = new Date(monthStr + "-01");
     const start = format(startOfMonth(date), 'yyyy-MM-dd');
@@ -139,6 +142,7 @@ export async function getMonthlySummary(monthStr: string): Promise<MonthlyStats>
 export async function closeMonth(monthStr: string) {
     const isAuth = await isAdminAuthenticated();
     if (!isAuth) throw new Error("Unauthorized");
+    const supabaseAdmin = getSupabaseAdmin();
 
     // Check if already closed
     const { data: existing } = await supabaseAdmin

@@ -12,18 +12,18 @@ export default async function StaffPortalPage() {
   }
 
   const staff = await getStaffByUserId(user.id)
-  
-  let allStaff = [];
+
+  let allStaff: any[] = [];
   // If staff is admin, fetch all staff for the terminal mode selector
   if (staff?.role === 'admin') {
-      allStaff = await getAllStaff();
+    allStaff = await getAllStaff();
   }
 
   return (
-    <StaffPortalView 
-      user={user} 
-      staffProfile={staff} 
-      allStaff={allStaff} 
+    <StaffPortalView
+      user={user}
+      staffProfile={staff}
+      allStaff={allStaff}
     />
   )
 }

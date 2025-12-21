@@ -1,7 +1,9 @@
-import { supabaseAdmin } from "@/lib/supabase";
+import { getSupabaseAdmin } from "@/lib/supabase";
 import { revalidateTag } from "next/cache";
 
-const admin = supabaseAdmin as any;
+function adminClient() {
+  return getSupabaseAdmin() as any;
+}
 
 export type StaffBlockRow = {
   id: string;
@@ -33,7 +35,7 @@ export async function getBlocksByDay(day: Date, staffId?: string): Promise<Staff
   const end = new Date(day);
   end.setHours(23, 59, 59, 999);
 
-  let query = admin
+  let query = adminClient()
     .from("staff_blocks")
     .select(`*, staff:staff_id(id, name:display_name, email)`) 
     .gte("start_at", start.toISOString())
@@ -56,7 +58,7 @@ export async function createBlock(input: StaffBlockInput): Promise<StaffBlockRow
     throw new Error("終了時刻は開始時刻より後である必要があります");
   }
 
-  const { data: overlapping } = await admin
+  const { data: overlapping } = await adminClient()
     .from("staff_blocks")
     .select("id")
     .eq("staff_id", input.staff_id)
@@ -67,7 +69,7 @@ export async function createBlock(input: StaffBlockInput): Promise<StaffBlockRow
     throw new Error("この時間帯は既にブロックが登録されています");
   }
 
-  const { data, error } = await admin
+  const { data, error } = await adminClient()
     .from("staff_blocks")
     .insert({
       staff_id: input.staff_id,
@@ -96,7 +98,7 @@ export async function updateBlock(blockId: string, updates: Partial<StaffBlockIn
   }
 
   if (updates.start_at || updates.end_at) {
-    const { data: current } = await admin
+    const { data: current } = await adminClient()
       .from("staff_blocks")
       .select("staff_id, start_at, end_at")
       .eq("id", blockId)
@@ -107,7 +109,7 @@ export async function updateBlock(blockId: string, updates: Partial<StaffBlockIn
       const endAt = updates.end_at || current.end_at;
       const staffId = updates.staff_id || current.staff_id;
 
-      const { data: overlapping } = await admin
+      const { data: overlapping } = await adminClient()
         .from("staff_blocks")
         .select("id")
         .eq("staff_id", staffId)
@@ -121,7 +123,7 @@ export async function updateBlock(blockId: string, updates: Partial<StaffBlockIn
     }
   }
 
-  const { data, error } = await admin
+  const { data, error } = await adminClient()
     .from("staff_blocks")
     .update({
       ...updates,
@@ -140,8 +142,7 @@ export async function updateBlock(blockId: string, updates: Partial<StaffBlockIn
 }
 
 export async function deleteBlock(blockId: string): Promise<void> {
-  const { error } = await admin.from("staff_blocks").delete().eq("id", blockId);
+  const { error } = await adminClient().from("staff_blocks").delete().eq("id", blockId);
   if (error) throw error;
   revalidateTag("staff_blocks");
 }
-

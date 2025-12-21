@@ -1,4 +1,4 @@
-import { supabaseAdmin } from "@/lib/supabase";
+import { getSupabaseAdmin } from "@/lib/supabase";
 
 export interface CustomerProfile {
     id: string; // Use email as ID for aggregation for now
@@ -11,7 +11,7 @@ export interface CustomerProfile {
 }
 
 export async function getCustomers(query?: string): Promise<CustomerProfile[]> {
-    const supabase = supabaseAdmin;
+    const supabase = getSupabaseAdmin();
 
     // Fetch all reservations.
     // In a real production app, we would use a specialized DB view or a dedicated table.
@@ -86,7 +86,7 @@ export interface CustomerDetail extends CustomerProfile {
 export async function getCustomer(id: string): Promise<CustomerDetail | null> {
     // ID is email in our current logic
     const email = decodeURIComponent(id);
-    const supabase = supabaseAdmin;
+    const supabase = getSupabaseAdmin();
 
     // Fetch all reservations for this email
     const { data: reservations, error } = await supabase

@@ -1,7 +1,7 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
-import { supabaseAdmin } from '@/lib/supabase'
+import { getSupabaseAdmin } from '@/lib/supabase'
 import { z } from 'zod'
 
 const createStaffSchema = z.object({
@@ -24,6 +24,7 @@ const updateStaffSchema = z.object({
 
 
 export async function createStaff(formData: FormData) {
+  const supabaseAdmin = getSupabaseAdmin()
   const rawData = {
     email: formData.get('email'),
     password: formData.get('password'),
@@ -87,6 +88,7 @@ export async function createStaff(formData: FormData) {
 }
 
 export async function updateStaff(formData: FormData) {
+  const supabaseAdmin = getSupabaseAdmin()
   const rawData = {
     id: formData.get('id'),
     userId: formData.get('userId'),
@@ -149,6 +151,7 @@ export async function updateStaff(formData: FormData) {
 }
 
 export async function getStaffWithDetails(staffId: string) {
+  const supabaseAdmin = getSupabaseAdmin()
   const { data: staff, error } = await supabaseAdmin
     .from('staff')
     .select('*')

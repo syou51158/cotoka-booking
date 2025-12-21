@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { supabaseAdmin } from "@/lib/supabase";
+import { getSupabaseAdmin } from "@/lib/supabase";
 import { verifyAdmin } from "@/lib/admin-auth";
 
 /**
@@ -9,6 +9,7 @@ import { verifyAdmin } from "@/lib/admin-auth";
 export async function GET(request: NextRequest) {
   try {
     await verifyAdmin(request);
+    const supabaseAdmin = getSupabaseAdmin();
     const { data, error } = await supabaseAdmin
       .from("staff")
       .select("id, display_name, email, active, created_at")

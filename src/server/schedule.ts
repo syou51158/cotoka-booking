@@ -1,4 +1,4 @@
-import { supabaseAdmin } from "@/lib/supabase";
+import { getSupabaseAdmin } from "@/lib/supabase";
 import { revalidateTag } from "next/cache";
 
 export type OpeningHoursRow = {
@@ -37,6 +37,7 @@ export type DateOverrideInput = {
  * 曜日別営業時間を取得
  */
 export async function getOpeningHours(): Promise<OpeningHoursRow[]> {
+  const supabaseAdmin = getSupabaseAdmin();
   const { data, error } = await supabaseAdmin
     .from("opening_hours")
     .select("*")
@@ -52,6 +53,7 @@ export async function getOpeningHours(): Promise<OpeningHoursRow[]> {
 export async function updateOpeningHours(
   hours: OpeningHoursInput[]
 ): Promise<OpeningHoursRow[]> {
+  const supabaseAdmin = getSupabaseAdmin();
   // バリデーション
   for (const h of hours) {
     if (h.weekday < 0 || h.weekday > 6) {
@@ -88,6 +90,7 @@ export async function updateOpeningHours(
  * 臨時休業・特別営業日一覧を取得
  */
 export async function getDateOverrides(): Promise<DateOverrideRow[]> {
+  const supabaseAdmin = getSupabaseAdmin();
   const { data, error } = await supabaseAdmin
     .from("date_overrides")
     .select("*")
@@ -103,6 +106,7 @@ export async function getDateOverrides(): Promise<DateOverrideRow[]> {
 export async function createDateOverride(
   input: DateOverrideInput
 ): Promise<DateOverrideRow> {
+  const supabaseAdmin = getSupabaseAdmin();
   // バリデーション
   if (!/^\d{4}-\d{2}-\d{2}$/.test(input.date)) {
     throw new Error("date must be YYYY-MM-DD format");
@@ -138,6 +142,7 @@ export async function createDateOverride(
  * 臨時営業日を削除
  */
 export async function deleteDateOverride(id: string): Promise<void> {
+  const supabaseAdmin = getSupabaseAdmin();
   const { error } = await supabaseAdmin
     .from("date_overrides")
     .delete()

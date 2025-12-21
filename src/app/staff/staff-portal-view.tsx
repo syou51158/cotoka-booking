@@ -46,6 +46,7 @@ export function StaffPortalView({ user, staffProfile, allStaff = [] }: Props) {
     const supabase = createSupabaseBrowserClient();
     await supabase.auth.signOut();
     router.refresh();
+    router.replace('/login'); // Explicitly redirect to login
   };
 
   const handleSwitchUser = () => {

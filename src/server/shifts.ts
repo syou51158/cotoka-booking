@@ -1,8 +1,10 @@
-import { supabaseAdmin } from "@/lib/supabase";
+import { getSupabaseAdmin } from "@/lib/supabase";
 import { revalidateTag } from "next/cache";
 // supabase の厳密な型により .from("shifts") などで型不一致が出るため、
 // このファイルでは any クライアントを利用して型エラーを回避します。
-const admin = supabaseAdmin as any;
+function adminClient() {
+  return getSupabaseAdmin() as any;
+}
 
 export type ShiftRow = {
   id: string;
@@ -38,7 +40,7 @@ export async function getShiftsByWeek(
   const windowStart = new Date(weekStart.getTime() - 24 * 60 * 60 * 1000);
   const windowEnd = new Date(weekEnd.getTime() + 24 * 60 * 60 * 1000);
 
-  let query = admin
+  let query = adminClient()
     .from("shifts")
     .select(`
       *,
@@ -68,7 +70,7 @@ export async function getStaffWithShifts(): Promise<
     shifts: ShiftRow[];
   }>
 > {
-  const { data, error } = await admin
+  const { data, error } = await adminClient()
     .from("staff")
     .select(`
       id,
@@ -104,7 +106,7 @@ export async function createShift(
   }
 
   // 重複チェック
-  const { data: overlapping } = await admin
+  const { data: overlapping } = await adminClient()
     .from("shifts")
     .select("id")
     .eq("staff_id", input.staff_id)
@@ -115,7 +117,7 @@ export async function createShift(
     throw new Error("この時間帯は既にシフトが登録されています");
   }
 
-  const { data, error } = await admin
+  const { data, error } = await adminClient()
     .from("shifts")
     .insert({
       staff_id: input.staff_id,
@@ -159,7 +161,7 @@ export async function updateShift(
 
   // 重複チェック（自身を除く）
   if (updates.start_at || updates.end_at) {
-    const { data: current } = await admin
+    const { data: current } = await adminClient()
       .from("shifts")
       .select("staff_id, start_at, end_at")
       .eq("id", shiftId)
@@ -170,7 +172,7 @@ export async function updateShift(
       const endAt = updates.end_at || current.end_at;
       const staffId = updates.staff_id || current.staff_id;
 
-      const { data: overlapping } = await admin
+      const { data: overlapping } = await adminClient()
         .from("shifts")
         .select("id")
         .eq("staff_id", staffId)
@@ -184,7 +186,7 @@ export async function updateShift(
     }
   }
 
-  const { data, error } = await admin
+  const { data, error } = await adminClient()
     .from("shifts")
     .update({
       ...updates,
@@ -213,7 +215,7 @@ export async function updateShift(
  * シフト削除
  */
 export async function deleteShift(shiftId: string): Promise<void> {
-  const { error } = await admin
+  const { error } = await adminClient()
     .from("shifts")
     .delete()
     .eq("id", shiftId);

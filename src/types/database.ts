@@ -1162,6 +1162,50 @@ export type Database = {
           },
         ];
       };
+      sales_transactions: {
+        Row: {
+          id: string;
+          staff_id: string;
+          date: string;
+          service_name: string;
+          amount: number;
+          customer_gender: string | null;
+          notes: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          staff_id: string;
+          date: string;
+          service_name: string;
+          amount: number;
+          customer_gender?: string | null;
+          notes?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          staff_id?: string;
+          date?: string;
+          service_name?: string;
+          amount?: number;
+          customer_gender?: string | null;
+          notes?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "sales_transactions_staff_id_fkey";
+            columns: ["staff_id"];
+            isOneToOne: false;
+            referencedRelation: "staff";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       payroll_runs: {
         Row: {
           id: string;

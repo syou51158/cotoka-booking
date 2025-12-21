@@ -1,4 +1,4 @@
-import { supabaseAdmin } from "@/lib/supabase";
+import { getSupabaseAdmin } from "@/lib/supabase";
 import { differenceInMinutes } from "date-fns";
 import { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/types/database";
@@ -6,12 +6,13 @@ import type { Database } from "@/types/database";
 export async function getDashboardSummary(
   from: string,
   to: string,
-  supabase: SupabaseClient<Database> = supabaseAdmin
+  supabase?: SupabaseClient<Database>
 ) {
+  const client = supabase ?? getSupabaseAdmin();
   const [sales, rewards, attendance] = await Promise.all([
-    getSalesSummary(from, to, supabase),
-    getRewardsSummary(from, to, supabase),
-    getAttendanceSummary(from, to, supabase),
+    getSalesSummary(from, to, client),
+    getRewardsSummary(from, to, client),
+    getAttendanceSummary(from, to, client),
   ]);
 
   return { sales, rewards, attendance };
@@ -86,10 +87,11 @@ async function getAttendanceSummary(
 }
 
 export async function getRealtimeStaffStatus(
-  supabase: SupabaseClient<Database> = supabaseAdmin
+  supabase?: SupabaseClient<Database>
 ) {
+  const client = supabase ?? getSupabaseAdmin();
   // スタッフ一覧取得
-  const { data: staff, error: staffError } = await supabase
+  const { data: staff, error: staffError } = await client
     .from("staff")
     .select("id, display_name, color")
     .eq("active", true);
@@ -98,7 +100,7 @@ export async function getRealtimeStaffStatus(
 
   // 今日の勤怠を取得
   const today = new Date().toISOString().split('T')[0];
-  const { data: attendance, error: attError } = await supabase
+  const { data: attendance, error: attError } = await client
     .from("attendance_records")
     .select("*")
     .eq("date", today);

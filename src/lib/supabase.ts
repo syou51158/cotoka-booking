@@ -40,6 +40,16 @@ export function createSupabaseServiceRoleClient() {
   });
 }
 
-// 既存のコードの互換性維持用: 多くのAPIで `supabaseAdmin` を直接参照している。
-// Service Roleクライアントのシングルトンをエクスポートして統一する。
-export const supabaseAdmin = createSupabaseServiceRoleClient();
+let supabaseAdminSingleton: ReturnType<
+  typeof createSupabaseServiceRoleClient
+> | null = null;
+
+export function getSupabaseAdmin() {
+  if (typeof window !== "undefined") {
+    throw new Error("Supabase service role client is server-only");
+  }
+  if (!supabaseAdminSingleton) {
+    supabaseAdminSingleton = createSupabaseServiceRoleClient();
+  }
+  return supabaseAdminSingleton;
+}
