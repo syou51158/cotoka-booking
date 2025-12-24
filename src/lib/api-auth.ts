@@ -1,5 +1,6 @@
 import { NextRequest } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
+import { getSupabaseAdmin } from "@/lib/supabase";
 
 export async function getEffectiveStaff(req: NextRequest) {
   const supabase = await createSupabaseServerClient();
@@ -43,7 +44,10 @@ export async function getEffectiveStaff(req: NextRequest) {
         return { error: "Target staff not found", status: 404 };
     }
 
-    return { supabase, staff: targetStaff, isMasquerading: true };
+    // Use admin client to bypass RLS when masquerading
+    const adminClient = getSupabaseAdmin();
+
+    return { supabase: adminClient, staff: targetStaff, isMasquerading: true };
   }
 
   // Regular staff or Admin acting as themselves

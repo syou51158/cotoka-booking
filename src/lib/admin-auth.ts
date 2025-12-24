@@ -20,27 +20,27 @@ export async function isAdminAuthenticated() {
   if (token) {
     try {
       if (token === getExpectedToken()) return true;
-    } catch {}
+    } catch { }
   }
 
   // 2. Check Supabase Session
   try {
-      const supabase = await createSupabaseServerClient();
-      const { data: { user }, error } = await supabase.auth.getUser();
-      
-      if (!error && user) {
-          const { data: profile } = await supabase
-              .from('profiles')
-              .select('role')
-              .eq('id', user.id)
-              .single();
-          
-          if (profile?.role === 'owner' || profile?.role === 'manager') {
-              return true;
-          }
+    const supabase = await createSupabaseServerClient();
+    const { data: { user }, error } = await supabase.auth.getUser();
+
+    if (!error && user) {
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', user.id)
+        .single();
+
+      if (profile?.role === 'owner' || profile?.role === 'manager') {
+        return true;
       }
+    }
   } catch (e) {
-      console.error("Supabase Auth Check Failed", e);
+    console.error("Supabase Auth Check Failed", e);
   }
 
   return false;
@@ -80,41 +80,41 @@ export async function verifyAdminAuth(request: Request) {
   // 1. Check Legacy Token from Request Headers
   const cookieHeader = request.headers.get("cookie");
   if (cookieHeader) {
-      const cookiesMap = cookieHeader.split(";").reduce(
-        (acc, cookie) => {
-          const [key, value] = cookie.trim().split("=");
-          acc[key] = value;
-          return acc;
-        },
-        {} as Record<string, string>,
-      );
-      const token = cookiesMap[ADMIN_COOKIE];
-      if (token) {
-           try {
-            const expected = getExpectedToken();
-            if (token === expected) return { success: true };
-          } catch {}
-      }
+    const cookiesMap = cookieHeader.split(";").reduce(
+      (acc, cookie) => {
+        const [key, value] = cookie.trim().split("=");
+        acc[key] = value;
+        return acc;
+      },
+      {} as Record<string, string>,
+    );
+    const token = cookiesMap[ADMIN_COOKIE];
+    if (token) {
+      try {
+        const expected = getExpectedToken();
+        if (token === expected) return { success: true };
+      } catch { }
+    }
   }
 
   // 2. Check Supabase Session (using global cookies() since we are in App Router)
   try {
-      const supabase = await createSupabaseServerClient();
-      const { data: { user }, error } = await supabase.auth.getUser();
-      
-      if (!error && user) {
-          const { data: profile } = await supabase
-              .from('profiles')
-              .select('role')
-              .eq('id', user.id)
-              .single();
-          
-          if (profile?.role === 'owner' || profile?.role === 'manager') {
-              return { success: true };
-          }
+    const supabase = await createSupabaseServerClient();
+    const { data: { user }, error } = await supabase.auth.getUser();
+
+    if (!error && user) {
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', user.id)
+        .single();
+
+      if (profile?.role === 'owner' || profile?.role === 'manager') {
+        return { success: true };
       }
+    }
   } catch (e) {
-      console.error("Supabase Auth Check Failed in API", e);
+    console.error("Supabase Auth Check Failed in API", e);
   }
 
   return { success: false, error: "Unauthorized" };

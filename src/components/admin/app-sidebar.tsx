@@ -16,7 +16,8 @@ import {
     LogOut,
     Sparkles,
     CalendarClock,
-    Banknote
+    Banknote,
+    Store
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { SITE_NAME } from "@/lib/config";
@@ -42,6 +43,12 @@ export function AppSidebar({ className }: SidebarProps) {
                     icon: CalendarDays,
                     href: "/admin/reservations",
                     active: pathname === "/admin/reservations",
+                },
+                {
+                    label: "スタッフポータル",
+                    icon: Store,
+                    href: "/staff",
+                    active: pathname.startsWith("/staff"),
                 },
             ],
         },
@@ -133,7 +140,7 @@ export function AppSidebar({ className }: SidebarProps) {
                     <div className="space-y-1">
                         {routes.map((group, i) => (
                             <div key={i} className="mb-6">
-                                <h3 className="mb-2 px-4 text-[10px] font-bold uppercase tracking-widest text-slate-400">
+                                <h3 className="mb-2 px-4 text-[10px] font-bold uppercase tracking-widest text-slate-300/70">
                                     {group.label}
                                 </h3>
                                 <div className="space-y-1">
@@ -148,7 +155,7 @@ export function AppSidebar({ className }: SidebarProps) {
                                                     : "text-slate-300 hover:bg-white/5 hover:text-white"
                                             )}
                                         >
-                                            <route.icon className={cn("h-4 w-4", route.active ? "text-primary" : "text-slate-400 group-hover:text-white")} />
+                                            <route.icon className={cn("h-4 w-4", route.active ? "text-primary" : "text-slate-300 group-hover:text-white")} />
                                             {route.label}
                                         </Link>
                                     ))}

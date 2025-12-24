@@ -60,19 +60,19 @@ export function SalesApprovalList({ initialEntries }: { initialEntries: SalesEnt
                                 <TableCell>¥{entry.sales_amount.toLocaleString()}</TableCell>
                                 <TableCell className="max-w-[200px] truncate" title={entry.note || ""}>{entry.note}</TableCell>
                                 <TableCell className="text-right space-x-2">
-                                    <Button 
-                                        size="sm" 
-                                        variant="outline" 
-                                        className="text-green-600 hover:text-green-700 hover:bg-green-50"
+                                    <Button
+                                        size="sm"
+                                        variant="outline"
+                                        className="text-green-400 hover:text-green-300 hover:bg-green-500/10 border-green-900/50"
                                         onClick={() => handleAction(entry.id, 'approved')}
                                         disabled={!!processing}
                                     >
                                         {processing === entry.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
                                     </Button>
-                                    <Button 
-                                        size="sm" 
-                                        variant="outline" 
-                                        className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                                    <Button
+                                        size="sm"
+                                        variant="outline"
+                                        className="text-red-400 hover:text-red-300 hover:bg-red-500/10 border-red-900/50"
                                         onClick={() => handleAction(entry.id, 'rejected')}
                                         disabled={!!processing}
                                     >

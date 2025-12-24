@@ -10,6 +10,7 @@ const createStaffSchema = z.object({
   name: z.string().min(1),
   role: z.enum(['staff', 'manager', 'owner']),
   app_role: z.enum(['employee', 'contractor', 'admin']),
+  commission_rate: z.number().min(0).max(100).default(40),
 })
 
 const updateStaffSchema = z.object({
@@ -18,6 +19,7 @@ const updateStaffSchema = z.object({
   name: z.string().min(1),
   role: z.enum(['staff', 'manager', 'owner']),
   app_role: z.enum(['employee', 'contractor', 'admin']),
+  commission_rate: z.number().min(0).max(100).default(40),
   email: z.string().email(),
   password: z.string().optional(),
 })
@@ -31,6 +33,7 @@ export async function createStaff(formData: FormData) {
     name: formData.get('name'),
     role: formData.get('role'), // profile role
     app_role: formData.get('app_role'), // staff app_role
+    commission_rate: Number(formData.get('commission_rate') || 40),
   }
 
   const result = createStaffSchema.safeParse(rawData)
@@ -38,7 +41,7 @@ export async function createStaff(formData: FormData) {
     return { error: 'Invalid input: ' + result.error.message }
   }
 
-  const { email, password, name, role, app_role } = result.data
+  const { email, password, name, role, app_role, commission_rate } = result.data
 
   // 1. Create Auth User
   const { data: userData, error: userError } = await supabaseAdmin.auth.admin.createUser({

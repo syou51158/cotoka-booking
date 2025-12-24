@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { format, startOfDay, endOfDay, startOfMonth, endOfMonth } from "date-fns";
 import { ja } from "date-fns/locale";
-import { ArrowUpRight, TrendingUp, Users, Calendar, AlertCircle } from "lucide-react";
+import { ArrowUpRight, TrendingUp, Users, Calendar, AlertCircle, Store } from "lucide-react";
 import { RealtimeStaffStatus } from "@/components/admin/realtime-staff-status";
 import { getAdminReservations } from "@/server/admin";
 import { getRealtimeStaffStatus, getDashboardSummary } from "@/server/admin-dashboard";
@@ -38,10 +38,16 @@ export default async function AdminDashboardPage() {
             {format(now, "yyyy年M月d日 (E)", { locale: ja })} の状況サマリー
           </p>
         </div>
-        <Link href="/admin/reservations" className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-white/5 border border-white/10 hover:bg-white/10 hover:text-white text-slate-300 transition-colors text-sm">
-          予約台帳へ
-          <ArrowUpRight className="w-4 h-4" />
-        </Link>
+        <div className="flex items-center gap-3">
+          <Link href="/staff" className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-emerald-500/10 border border-emerald-500/20 hover:bg-emerald-500/20 hover:text-emerald-300 text-emerald-400 transition-colors text-sm font-medium">
+            <Store className="w-4 h-4" />
+            スタッフポータル
+          </Link>
+          <Link href="/admin/reservations" className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-white/5 border border-white/10 hover:bg-white/10 hover:text-white text-slate-300 transition-colors text-sm">
+            予約台帳へ
+            <ArrowUpRight className="w-4 h-4" />
+          </Link>
+        </div>
       </div>
 
       {/* KPI Grid (Glass) */}

@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import { LogOut, User, Users } from "lucide-react";
+import { LogOut, User, Users, LayoutDashboard } from "lucide-react";
 import { createSupabaseBrowserClient } from "@/lib/supabase";
 import { WeatherCard } from "@/components/staff/weather-card";
 import { useRouter } from "next/navigation";
@@ -69,15 +69,26 @@ export function StaffPortalView({ user, staffProfile, allStaff = [] }: Props) {
 
           <div className="flex items-center gap-2">
             {isAdmin && (
-              <Button
-                variant="ghost"
-                size="sm"
-                className="text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50"
-                onClick={handleSwitchUser}
-              >
-                <Users className="w-4 h-4 mr-1" />
-                切替
-              </Button>
+              <>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="text-slate-500 hover:text-slate-700"
+                  onClick={() => router.push('/admin/dashboard')}
+                >
+                  <LayoutDashboard className="w-4 h-4 mr-1" />
+                  管理
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50"
+                  onClick={handleSwitchUser}
+                >
+                  <Users className="w-4 h-4 mr-1" />
+                  切替
+                </Button>
+              </>
             )}
             <Button
               variant="ghost"

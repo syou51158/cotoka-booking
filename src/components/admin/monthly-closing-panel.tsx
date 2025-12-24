@@ -39,12 +39,12 @@ export function MonthlyClosingPanel() {
             setClosing(false);
         }
     };
-    
+
     const handleDownloadCSV = () => {
         if (!stats) return;
         const headers = ["スタッフID", "名前", "総売上", "件数"];
         const rows = stats.staffStats.map(s => [s.staff_id, s.staff_name, s.total_sales, s.entry_count]);
-        const csvContent = "data:text/csv;charset=utf-8," 
+        const csvContent = "data:text/csv;charset=utf-8,"
             + [headers.join(","), ...rows.map(e => e.join(","))].join("\n");
         const encodedUri = encodeURI(csvContent);
         const link = document.createElement("a");
@@ -64,8 +64,8 @@ export function MonthlyClosingPanel() {
                 <div className="flex gap-4 items-end">
                     <div className="space-y-2">
                         <label className="text-sm font-medium">対象月</label>
-                        <input 
-                            type="month" 
+                        <input
+                            type="month"
                             className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                             value={month}
                             onChange={(e) => setMonth(e.target.value)}
@@ -79,17 +79,17 @@ export function MonthlyClosingPanel() {
                 {stats && (
                     <div className="space-y-4 animate-in fade-in">
                         <div className="grid grid-cols-3 gap-4">
-                            <div className="p-4 border rounded-lg bg-muted/50">
-                                <div className="text-sm text-muted-foreground">総売上</div>
+                            <div className="p-4 border rounded-lg bg-slate-800/40 border-slate-700/50">
+                                <div className="text-sm text-slate-400">総売上</div>
                                 <div className="text-2xl font-bold">¥{stats.totalSales.toLocaleString()}</div>
                             </div>
-                            <div className="p-4 border rounded-lg bg-muted/50">
-                                <div className="text-sm text-muted-foreground">承認済み売上</div>
-                                <div className="text-2xl font-bold text-green-600">¥{stats.approvedSales.toLocaleString()}</div>
+                            <div className="p-4 border rounded-lg bg-slate-800/40 border-slate-700/50">
+                                <div className="text-sm text-slate-400">承認済み売上</div>
+                                <div className="text-2xl font-bold text-green-400">¥{stats.approvedSales.toLocaleString()}</div>
                             </div>
-                            <div className="p-4 border rounded-lg bg-muted/50">
-                                <div className="text-sm text-muted-foreground">承認待ち件数</div>
-                                <div className="text-2xl font-bold text-yellow-600">{stats.pendingCount}</div>
+                            <div className="p-4 border rounded-lg bg-slate-800/40 border-slate-700/50">
+                                <div className="text-sm text-slate-400">承認待ち件数</div>
+                                <div className="text-2xl font-bold text-yellow-400">{stats.pendingCount}</div>
                             </div>
                         </div>
 

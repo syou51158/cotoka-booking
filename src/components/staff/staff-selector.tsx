@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from 'react'
+import Link from "next/link"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -142,6 +143,12 @@ export function StaffSelector({ allStaff, onSelect }: StaffSelectorProps) {
                             )}
                         </button>
                     ))}
+                </div>
+
+                <div className="text-center pt-4">
+                    <Link href="/admin/dashboard" className="text-sm text-slate-400 hover:text-indigo-600 underline underline-offset-4">
+                        管理者ダッシュボードに戻る
+                    </Link>
                 </div>
             </div>
         </div>
